@@ -88,9 +88,12 @@ hackrf_source_c::hackrf_source_c (const std::string &args)
   _samp_avail = _buf_len / BYTES_PER_SAMPLE;
 
   // create a lookup table for gr_complex values
-  for (unsigned int i = 0; i <= 0xff; i++) {
-    _lut.push_back( float(int8_t(i)) * (1.0f/128.0f) );
-  }
+  _dc_offset = gr_complex(0,0);
+  _dc_offset_mode = 2;
+  _avg_loops = 0;
+  _avgcount = 0;
+  _avg = gr_complex(0.0,0.0);
+  update_lut();
 
   if ( BUF_NUM != _buf_num || BUF_LEN != _buf_len ) {
     std::cerr << "Using " << _buf_num << " buffers of size " << _buf_len << "."
@@ -134,6 +137,28 @@ hackrf_source_c::~hackrf_source_c ()
     _buf = NULL;
   }
 }
+
+void hackrf_source_c::update_lut()
+{
+  std::vector<gr_complex> lut;
+  for (unsigned int i = 0; i <= 0xffff; i++) {
+#ifdef BOOST_LITTLE_ENDIAN
+    lut.push_back( _dc_offset + gr_complex( (float(int8_t(i & 0xff))) * (1.0f/128.0f),
+                                (float(int8_t(i >> 8))) * (1.0f/128.0f) ) );
+#else // BOOST_BIG_ENDIAN
+    lut.push_back( _dc_offset + gr_complex( (float(int8_t(i >> 8))) * (1.0f/128.0f),
+                                (float(int8_t(i & 0xff))) * (1.0f/128.0f) ) );
+#endif
+  }
+  _lut=lut;
+}
+
+void hackrf_source_c::set_dc_offset_mode( int mode, size_t chan )
+{
+    _dc_offset_mode = mode;
+}
+
+
 
 int hackrf_source_c::_hackrf_rx_callback(hackrf_transfer *transfer)
 {
@@ -248,7 +273,26 @@ int hackrf_source_c::work( int noutput_items,
     _buf_offset = remaining;
     _samp_avail = (_buf_len / BYTES_PER_SAMPLE) - remaining;
   }
-
+  if(_dc_offset_mode == 2)
+  {
+    out = (gr_complex *)output_items[0];
+    for (int i = 0; i < noutput_items; ++i)
+    {
+        _avg+= *out++;
+        _avgcount++;
+        if(_avgcount>=(int)_sample_rate)
+        {
+            _dc_offset+=gr_complex(-_avg.real() / float(_avgcount),-_avg.imag() / float(_avgcount));
+            _avg=gr_complex(0.0,0.0);
+            _avgcount=0;
+            update_lut();
+            _avg_loops++;
+            if(_avg_loops >= 5 )
+                _dc_offset_mode = 1;
+        }
+    }
+  }
+  
   return noutput_items;
 }
 
