@@ -124,15 +124,12 @@ hackrf_source_c::hackrf_source_c (const std::string &args)
   _samp_avail = _buf_len / BYTES_PER_SAMPLE;
 
   // create a lookup table for gr_complex values
-  for (unsigned int i = 0; i <= 0xffff; i++) {
-#ifdef BOOST_LITTLE_ENDIAN
-    _lut.push_back( gr_complex( (float(int8_t(i & 0xff))) * (1.0f/128.0f),
-                                (float(int8_t(i >> 8))) * (1.0f/128.0f) ) );
-#else // BOOST_BIG_ENDIAN
-    _lut.push_back( gr_complex( (float(int8_t(i >> 8))) * (1.0f/128.0f),
-                                (float(int8_t(i & 0xff))) * (1.0f/128.0f) ) );
-#endif
-  }
+  _dc_offset = gr_complex(0,0);
+  _dc_offset_mode = 2;
+  _avg_loops = 0;
+  _avgcount = 0;
+  _avg = gr_complex(0.0,0.0);
+  update_lut();
 
   {
     boost::mutex::scoped_lock lock( _usage_mutex );
@@ -275,6 +272,28 @@ hackrf_source_c::~hackrf_source_c ()
   }
 }
 
+void hackrf_source_c::update_lut()
+{
+  std::vector<gr_complex> lut;
+  for (unsigned int i = 0; i <= 0xffff; i++) {
+#ifdef BOOST_LITTLE_ENDIAN
+    lut.push_back( _dc_offset + gr_complex( (float(int8_t(i & 0xff))) * (1.0f/128.0f),
+                                (float(int8_t(i >> 8))) * (1.0f/128.0f) ) );
+#else // BOOST_BIG_ENDIAN
+    lut.push_back( _dc_offset + gr_complex( (float(int8_t(i >> 8))) * (1.0f/128.0f),
+                                (float(int8_t(i & 0xff))) * (1.0f/128.0f) ) );
+#endif
+  }
+  _lut=lut;
+}
+
+void hackrf_source_c::set_dc_offset_mode( int mode, size_t chan )
+{
+    _dc_offset_mode = mode;
+}
+
+
+
 int hackrf_source_c::_hackrf_rx_callback(hackrf_transfer *transfer)
 {
   hackrf_source_c *obj = (hackrf_source_c *)transfer->rx_ctx;
@@ -389,7 +408,26 @@ int hackrf_source_c::work( int noutput_items,
     _buf_offset = remaining;
     _samp_avail = (_buf_len / BYTES_PER_SAMPLE) - remaining;
   }
-
+  if(_dc_offset_mode == 2)
+  {
+    out = (gr_complex *)output_items[0];
+    for (int i = 0; i < noutput_items; ++i)
+    {
+        _avg+= *out++;
+        _avgcount++;
+        if(_avgcount>=(int)_sample_rate)
+        {
+            _dc_offset+=gr_complex(-_avg.real() / float(_avgcount),-_avg.imag() / float(_avgcount));
+            _avg=gr_complex(0.0,0.0);
+            _avgcount=0;
+            update_lut();
+            _avg_loops++;
+            if(_avg_loops >= 5 )
+                _dc_offset_mode = 1;
+        }
+    }
+  }
+  
   return noutput_items;
 }
 
@@ -432,7 +470,6 @@ std::vector<std::string> hackrf_source_c::get_devices()
   
   hackrf_device_list_free(list);
 #else
-
   int ret;
   hackrf_device *dev = NULL;
   ret = hackrf_open(&dev);
