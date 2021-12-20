@@ -273,7 +273,7 @@ int hackrf_source_c::work( int noutput_items,
     _buf_offset = remaining;
     _samp_avail = (_buf_len / BYTES_PER_SAMPLE) - remaining;
   }
-  if(_dc_offset_mode == 2)
+  if((_dc_offset_mode == 2) && (_avg_loops < 5 ))
   {
     out = (gr_complex *)output_items[0];
     for (int i = 0; i < noutput_items; ++i)
@@ -287,8 +287,6 @@ int hackrf_source_c::work( int noutput_items,
             _avgcount=0;
             update_lut();
             _avg_loops++;
-            if(_avg_loops >= 5 )
-                _dc_offset_mode = 1;
         }
     }
   }
@@ -438,6 +436,7 @@ double hackrf_source_c::set_if_gain(double gain, size_t chan)
     ret = hackrf_set_lna_gain( _dev.get(), uint32_t(clip_gain) );
     if ( HACKRF_SUCCESS == ret ) {
       _lna_gain = clip_gain;
+      _avg_loops = 0;
     } else {
       HACKRF_THROW_ON_ERROR( ret, HACKRF_FUNC_STR( "hackrf_set_lna_gain", clip_gain ) )
     }
@@ -457,6 +456,7 @@ double hackrf_source_c::set_bb_gain( double gain, size_t chan )
     ret = hackrf_set_vga_gain( _dev.get(), uint32_t(clip_gain) );
     if ( HACKRF_SUCCESS == ret ) {
       _vga_gain = clip_gain;
+      _avg_loops = 0;
     } else {
       HACKRF_THROW_ON_ERROR( ret, HACKRF_FUNC_STR( "hackrf_set_vga_gain", clip_gain ) )
     }
