@@ -140,17 +140,14 @@ hackrf_source_c::~hackrf_source_c ()
 
 void hackrf_source_c::update_lut()
 {
-  std::vector<gr_complex> lut;
-  for (unsigned int i = 0; i <= 0xffff; i++) {
-#ifdef BOOST_LITTLE_ENDIAN
-    lut.push_back( _dc_offset + gr_complex( (float(int8_t(i & 0xff))) * (1.0f/128.0f),
-                                (float(int8_t(i >> 8))) * (1.0f/128.0f) ) );
-#else // BOOST_BIG_ENDIAN
-    lut.push_back( _dc_offset + gr_complex( (float(int8_t(i >> 8))) * (1.0f/128.0f),
-                                (float(int8_t(i & 0xff))) * (1.0f/128.0f) ) );
-#endif
+  std::vector<float> lut_i;
+  std::vector<float> lut_q;
+  for (unsigned int i = 0; i <= 0xff; i++) {
+    lut_i.push_back(_dc_offset.real() + (float(int8_t(i & 0xff))) * (1.0f/128.0f));
+    lut_q.push_back(_dc_offset.imag() + (float(int8_t(i & 0xff))) * (1.0f/128.0f));
   }
-  _lut=lut;
+  _lut_i = lut_i;
+  _lut_q = lut_q;
 }
 
 void hackrf_source_c::set_dc_offset_mode( int mode, size_t chan )
@@ -215,6 +212,7 @@ bool hackrf_source_c::stop()
   return true;
 }
 
+
 int hackrf_source_c::work( int noutput_items,
                         gr_vector_const_void_star &input_items,
                         gr_vector_void_star &output_items )
@@ -244,7 +242,7 @@ int hackrf_source_c::work( int noutput_items,
     return WORK_DONE;
 
   const uint8_t *buf = _buf[_buf_head] + _buf_offset * BYTES_PER_SAMPLE;
-#define TO_COMPLEX(p) gr_complex( _lut[(p)[0]], _lut[(p)[1]] )
+#define TO_COMPLEX(p) gr_complex( _lut_i[(p)[0]], _lut_q[(p)[1]] )
 
   if (noutput_items <= _samp_avail) {
     for (int i = 0; i < noutput_items; ++i)

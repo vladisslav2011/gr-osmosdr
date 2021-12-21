@@ -126,7 +126,8 @@ private:
   int hackrf_rx_callback(unsigned char *buf, uint32_t len);
   void update_lut();
 
-  std::vector<float> _lut;
+  std::vector<float> _lut_i;
+  std::vector<float> _lut_q;
 
   unsigned char **_buf;
   unsigned int _buf_num;
