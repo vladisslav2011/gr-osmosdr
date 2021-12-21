@@ -259,7 +259,7 @@ int hackrf_source_c::work( int noutput_items,
     return WORK_DONE;
 
   const uint8_t *buf = _buf[_buf_head] + _buf_offset * BYTES_PER_SAMPLE;
-#define TO_COMPLEX(p) gr_complex( _lut[(p)[0]], _lut[(p)[1]] )
+#define TO_COMPLEX(p) gr_complex( _lut_i[(p)[0]], _lut_q[(p)[1]] )
 
   if (noutput_items <= _samp_avail) {
     for (int i = 0; i < noutput_items; ++i)
