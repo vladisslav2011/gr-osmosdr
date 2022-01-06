@@ -124,15 +124,12 @@ hackrf_source_c::hackrf_source_c (const std::string &args)
   _samp_avail = _buf_len / BYTES_PER_SAMPLE;
 
   // create a lookup table for gr_complex values
-  for (unsigned int i = 0; i <= 0xffff; i++) {
-#ifdef BOOST_LITTLE_ENDIAN
-    _lut.push_back( gr_complex( (float(int8_t(i & 0xff))) * (1.0f/128.0f),
-                                (float(int8_t(i >> 8))) * (1.0f/128.0f) ) );
-#else // BOOST_BIG_ENDIAN
-    _lut.push_back( gr_complex( (float(int8_t(i >> 8))) * (1.0f/128.0f),
-                                (float(int8_t(i & 0xff))) * (1.0f/128.0f) ) );
-#endif
-  }
+  _dc_offset = gr_complex(0,0);
+  _dc_offset_mode = 2;
+  _avg_loops = 0;
+  _avgcount = 0;
+  _avg = gr_complex(0.0,0.0);
+  update_lut();
 
   {
     boost::mutex::scoped_lock lock( _usage_mutex );
@@ -275,6 +272,33 @@ hackrf_source_c::~hackrf_source_c ()
   }
 }
 
+void hackrf_source_c::update_lut()
+{
+  std::vector<float> lut_i;
+  std::vector<float> lut_q;
+  for (unsigned int i = 0; i <= 0xff; i++) {
+    lut_i.push_back(_dc_offset.real() + (float(int8_t(i & 0xff))) * (1.0f/128.0f));
+    lut_q.push_back(_dc_offset.imag() + (float(int8_t(i & 0xff))) * (1.0f/128.0f));
+  }
+  _lut_i = lut_i;
+  _lut_q = lut_q;
+}
+
+void hackrf_source_c::set_dc_offset_mode( int mode, size_t chan )
+{
+    if (_dc_offset_mode == mode)
+      return;
+    _dc_offset_mode = mode;
+    if (mode == 0) {
+      _dc_offset = gr_complex(0.0,0.0);
+      update_lut();
+    }
+    _avg_loops = 0;
+    _avgcount = 0;
+}
+
+
+
 int hackrf_source_c::_hackrf_rx_callback(hackrf_transfer *transfer)
 {
   hackrf_source_c *obj = (hackrf_source_c *)transfer->rx_ctx;
@@ -339,6 +363,7 @@ bool hackrf_source_c::stop()
   return true;
 }
 
+
 int hackrf_source_c::work( int noutput_items,
                         gr_vector_const_void_star &input_items,
                         gr_vector_void_star &output_items )
@@ -364,13 +389,13 @@ int hackrf_source_c::work( int noutput_items,
 
   if (noutput_items <= _samp_avail) {
     for (int i = 0; i < noutput_items; ++i)
-      *out++ = _lut[ *(buf + i) ];
+      *out++ = gr_complex(_lut_i[ *(unsigned char *)(buf + i) ],_lut_q[ *((unsigned char *)(buf + i) +1) ]);
 
     _buf_offset += noutput_items;
     _samp_avail -= noutput_items;
   } else {
     for (int i = 0; i < _samp_avail; ++i)
-      *out++ = _lut[ *(buf + i) ];
+      *out++ = gr_complex(_lut_i[ *(unsigned char *)(buf + i) ],_lut_q[ *((unsigned char *)(buf + i) +1) ]);
 
     {
       boost::mutex::scoped_lock lock( _buf_mutex );
@@ -384,12 +409,29 @@ int hackrf_source_c::work( int noutput_items,
     int remaining = noutput_items - _samp_avail;
 
     for (int i = 0; i < remaining; ++i)
-      *out++ = _lut[ *(buf + i) ];
+      *out++ = gr_complex(_lut_i[ *(unsigned char *)(buf + i) ],_lut_q[ *((unsigned char *)(buf + i) +1) ]);
 
     _buf_offset = remaining;
     _samp_avail = (_buf_len / BYTES_PER_SAMPLE) - remaining;
   }
-
+  if((_dc_offset_mode == 2) && (_avg_loops < 5 ))
+  {
+    out = (gr_complex *)output_items[0];
+    for (int i = 0; i < noutput_items; ++i)
+    {
+        _avg+= *out++;
+        _avgcount++;
+        if(_avgcount>=(int)_sample_rate)
+        {
+            _dc_offset+=gr_complex(-_avg.real() / float(_avgcount),-_avg.imag() / float(_avgcount));
+            _avg=gr_complex(0.0,0.0);
+            _avgcount=0;
+            update_lut();
+            _avg_loops++;
+        }
+    }
+  }
+  
   return noutput_items;
 }
 
@@ -432,7 +474,6 @@ std::vector<std::string> hackrf_source_c::get_devices()
   
   hackrf_device_list_free(list);
 #else
-
   int ret;
   hackrf_device *dev = NULL;
   ret = hackrf_open(&dev);
@@ -675,6 +716,7 @@ double hackrf_source_c::set_if_gain(double gain, size_t chan)
     ret = hackrf_set_lna_gain( _dev, uint32_t(clip_gain) );
     if ( HACKRF_SUCCESS == ret ) {
       _lna_gain = clip_gain;
+      _avg_loops = 0;
     } else {
       HACKRF_THROW_ON_ERROR( ret, HACKRF_FUNC_STR( "hackrf_set_lna_gain", clip_gain ) )
     }
@@ -694,6 +736,7 @@ double hackrf_source_c::set_bb_gain( double gain, size_t chan )
     ret = hackrf_set_vga_gain( _dev, uint32_t(clip_gain) );
     if ( HACKRF_SUCCESS == ret ) {
       _vga_gain = clip_gain;
+      _avg_loops = 0;
     } else {
       HACKRF_THROW_ON_ERROR( ret, HACKRF_FUNC_STR( "hackrf_set_vga_gain", clip_gain ) )
     }

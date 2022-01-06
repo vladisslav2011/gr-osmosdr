@@ -115,6 +115,8 @@ public:
   std::vector< std::string > get_antennas( size_t chan = 0 );
   std::string set_antenna( const std::string & antenna, size_t chan = 0 );
   std::string get_antenna( size_t chan = 0 );
+  void set_dc_offset( const std::complex<double> &offset, size_t chan = 0 ) { _dc_offset = offset;}
+  void set_dc_offset_mode( int mode, size_t chan = 0 );
 
   double set_bandwidth( double bandwidth, size_t chan = 0 );
   double get_bandwidth( size_t chan = 0 );
@@ -125,11 +127,13 @@ private:
   int hackrf_rx_callback(unsigned char *buf, uint32_t len);
   static void _hackrf_wait(hackrf_source_c *obj);
   void hackrf_wait();
+  void update_lut();
 
   static int _usage;
   static boost::mutex _usage_mutex;
 
-  std::vector<gr_complex> _lut;
+  std::vector<float> _lut_i;
+  std::vector<float> _lut_q;
 
   hackrf_device *_dev;
   gr::thread::thread _thread;
@@ -152,6 +156,11 @@ private:
   double _lna_gain;
   double _vga_gain;
   double _bandwidth;
+  gr_complex _dc_offset;
+  int _dc_offset_mode;
+  gr_complex _avg;
+  int _avgcount;
+  int _avg_loops;
 };
 
 #endif /* INCLUDED_HACKRF_SOURCE_C_H */
