@@ -84,7 +84,9 @@ miri_source_c::miri_source_c (const std::string &args)
         gr::io_signature::make(MIN_OUT, MAX_OUT, sizeof (gr_complex))),
     _running(true),
     _auto_gain(false),
-    _skipped(0)
+    _skipped(0),
+    _freq_corr(0.0),
+    _center_freq(100.0e6)
 {
   int ret;
   unsigned int dev_index = 0;
@@ -116,7 +118,7 @@ miri_source_c::miri_source_c (const std::string &args)
             << std::endl;
 
   _dev = NULL;
-  ret = mirisdr_open( &_dev, dev_index );
+  ret = mirisdr_open( &_dev, MIRISDR_HW_DEFAULT, dev_index );
   if (ret < 0)
     throw std::runtime_error("Failed to open mirisdr device.");
 #if 0
@@ -330,28 +332,33 @@ osmosdr::freq_range_t miri_source_c::get_freq_range( size_t chan )
 
 double miri_source_c::set_center_freq( double freq, size_t chan )
 {
+#define APPLY_PPM_CORR(val, ppm) ((val) * (1.0 + (ppm) * 0.000001))
   if (_dev)
-    mirisdr_set_center_freq( _dev, (uint32_t)freq );
-
+  {
+    _center_freq = freq;
+    double corr_freq = APPLY_PPM_CORR( freq, _freq_corr );
+    mirisdr_set_center_freq( _dev, (uint32_t)corr_freq );
+  }
   return get_center_freq( chan );
 }
 
 double miri_source_c::get_center_freq( size_t chan )
 {
   if (_dev)
-    return (double)mirisdr_get_center_freq( _dev );
-
+      return double(mirisdr_get_center_freq( _dev )) / (1.0 + _freq_corr * 0.000001);
   return 0;
 }
 
 double miri_source_c::set_freq_corr( double ppm, size_t chan )
 {
+  _freq_corr = ppm;
+  set_center_freq( _center_freq );
   return get_freq_corr( chan );
 }
 
 double miri_source_c::get_freq_corr( size_t chan )
 {
-  return 0;
+  return _freq_corr;
 }
 
 std::vector<std::string> miri_source_c::get_gain_names( size_t chan )
