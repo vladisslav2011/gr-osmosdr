@@ -119,6 +119,9 @@ private:
 
   bool _auto_gain;
   unsigned int _skipped;
+  double _freq_corr;
+  double  _center_freq;
+
 };
 
 #endif /* INCLUDED_MIRI_SOURCE_C_H */
