@@ -96,6 +96,8 @@ private:
   std::vector< std::string > get_antennas( size_t chan = 0 );
   std::string set_antenna( const std::string & antenna, size_t chan = 0 );
   std::string get_antenna( size_t chan = 0 );
+  double set_bandwidth( double bandwidth, size_t chan );
+  double get_bandwidth( size_t chan );
 
 private:
   static void _mirisdr_callback(unsigned char *buf, uint32_t len, void *ctx);
