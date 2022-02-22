@@ -456,3 +456,21 @@ std::string miri_source_c::get_antenna( size_t chan )
 {
   return "RX";
 }
+
+double miri_source_c::set_bandwidth( double bandwidth, size_t chan )
+{
+  if ( bandwidth == 0.0 ) /* bandwidth of 0 means automatic filter selection */
+    bandwidth = mirisdr_get_sample_rate( _dev ) * 0.75; /* select narrower filters to prevent aliasing */
+
+  if ( _dev ) {
+    mirisdr_set_bandwidth( _dev, uint32_t(bandwidth) );
+    return get_bandwidth( chan);
+  }
+
+  return 0.0;
+}
+
+double miri_source_c::get_bandwidth( size_t chan )
+{
+  return double(mirisdr_get_bandwidth( _dev ));
+}
