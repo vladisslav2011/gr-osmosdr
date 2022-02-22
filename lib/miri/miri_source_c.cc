@@ -241,15 +241,15 @@ int miri_source_c::work( int noutput_items,
 
   if (noutput_items <= _samp_avail) {
     for (int i = 0; i < noutput_items; i++)
-      *out++ = gr_complex( float(*(buf + i * 2 + 0)) * (1.0f/4096.0f),
-                           float(*(buf + i * 2 + 1)) * (1.0f/4096.0f) );
+      *out++ = gr_complex( float(*(buf + i * 2 + 0)) * (1.0f/32768.0f),
+                           float(*(buf + i * 2 + 1)) * (1.0f/32768.0f) );
 
     _buf_offset += noutput_items * 2;
     _samp_avail -= noutput_items;
   } else {
     for (int i = 0; i < _samp_avail; i++)
-      *out++ = gr_complex( float(*(buf + i * 2 + 0)) * (1.0f/4096.0f),
-                           float(*(buf + i * 2 + 1)) * (1.0f/4096.0f) );
+      *out++ = gr_complex( float(*(buf + i * 2 + 0)) * (1.0f/32768.0f),
+                           float(*(buf + i * 2 + 1)) * (1.0f/32768.0f) );
 
     {
       std::lock_guard<std::mutex> lock( _buf_mutex );
@@ -263,8 +263,8 @@ int miri_source_c::work( int noutput_items,
     int remaining = noutput_items - _samp_avail;
 
     for (int i = 0; i < remaining; i++)
-      *out++ = gr_complex( float(*(buf + i * 2 + 0)) * (1.0f/4096.0f),
-                           float(*(buf + i * 2 + 1)) * (1.0f/4096.0f) );
+      *out++ = gr_complex( float(*(buf + i * 2 + 0)) * (1.0f/32768.0f),
+                           float(*(buf + i * 2 + 1)) * (1.0f/32768.0f) );
 
     _buf_offset = remaining * 2;
     _samp_avail = (_buf_lens[_buf_head] / BYTES_PER_SAMPLE) - remaining;
