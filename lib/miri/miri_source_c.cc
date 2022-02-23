@@ -361,7 +361,7 @@ osmosdr::freq_range_t miri_source_c::get_freq_range( size_t chan )
   range += osmosdr::range_t( 64e6, 108e6 ); /* VHF Band II (64 - 108 MHz) */
   range += osmosdr::range_t( 162e6, 240e6 ); /* Band III (162 - 240 MHz) */
   range += osmosdr::range_t( 470e6, 960e6 ); /* Band IV/V (470 - 960 MHz) */
-  range += osmosdr::range_t( 1450e6, 1675e6 ); /* L-Band (1450 - 1675 MHz) */
+  range += osmosdr::range_t( 1450e6, 2000e6 ); /* L-Band (1450 - 1675 MHz) */
 
   return range;
 }
