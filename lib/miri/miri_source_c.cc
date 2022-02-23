@@ -50,6 +50,7 @@ using namespace boost::assign;
 
 #define BYTES_PER_SAMPLE  4 // mirisdr device delivers 16 bit signed IQ data
                             // containing 12 bits of information
+#define DC_LOOPS 5
 
 /*
  * Create a new instance of miri_source_c and return
@@ -86,7 +87,12 @@ miri_source_c::miri_source_c (const std::string &args)
     _auto_gain(false),
     _skipped(0),
     _freq_corr(0.0),
-    _center_freq(100.0e6)
+    _center_freq(100.0e6),
+    _dc_offset(0.0),
+    _dc_accum(0.0),
+    _dc_loops(0),
+    _dc_count(0),
+    _dc_size(0)
 {
   int ret;
   unsigned int dev_index = 0;
@@ -118,7 +124,7 @@ miri_source_c::miri_source_c (const std::string &args)
             << std::endl;
 
   _dev = NULL;
-  ret = mirisdr_open( &_dev, MIRISDR_HW_DEFAULT, dev_index );
+  ret = mirisdr_open( &_dev, MIRISDR_HW_SDRPLAY, dev_index );
   if (ret < 0)
     throw std::runtime_error("Failed to open mirisdr device.");
 #if 0
@@ -141,7 +147,6 @@ miri_source_c::miri_source_c (const std::string &args)
     for(unsigned int i = 0; i < _buf_num; ++i)
       _buf[i] = (unsigned short *) malloc(BUF_SIZE);
   }
-
   _thread = gr::thread::thread(_mirisdr_wait, this);
 }
 
@@ -221,6 +226,14 @@ void miri_source_c::mirisdr_wait()
   _buf_cond.notify_one();
 }
 
+void miri_source_c::rearm_dcr()
+{
+  _dc_size = mirisdr_get_sample_rate(_dev);
+  _dc_loops = 0;
+  _dc_count = 0;
+  _dc_accum = gr_complex(0.0);
+}
+
 int miri_source_c::work( int noutput_items,
                         gr_vector_const_void_star &input_items,
                         gr_vector_void_star &output_items )
@@ -242,14 +255,16 @@ int miri_source_c::work( int noutput_items,
   if (noutput_items <= _samp_avail) {
     for (int i = 0; i < noutput_items; i++)
       *out++ = gr_complex( float(*(buf + i * 2 + 0)) * (1.0f/32768.0f),
-                           float(*(buf + i * 2 + 1)) * (1.0f/32768.0f) );
+                           float(*(buf + i * 2 + 1)) * (1.0f/32768.0f) ) -
+                           _dc_offset;
 
     _buf_offset += noutput_items * 2;
     _samp_avail -= noutput_items;
   } else {
     for (int i = 0; i < _samp_avail; i++)
       *out++ = gr_complex( float(*(buf + i * 2 + 0)) * (1.0f/32768.0f),
-                           float(*(buf + i * 2 + 1)) * (1.0f/32768.0f) );
+                           float(*(buf + i * 2 + 1)) * (1.0f/32768.0f) ) -
+                           _dc_offset;
 
     {
       std::lock_guard<std::mutex> lock( _buf_mutex );
@@ -264,12 +279,32 @@ int miri_source_c::work( int noutput_items,
 
     for (int i = 0; i < remaining; i++)
       *out++ = gr_complex( float(*(buf + i * 2 + 0)) * (1.0f/32768.0f),
-                           float(*(buf + i * 2 + 1)) * (1.0f/32768.0f) );
+                           float(*(buf + i * 2 + 1)) * (1.0f/32768.0f) ) -
+                           _dc_offset;
 
     _buf_offset = remaining * 2;
     _samp_avail = (_buf_lens[_buf_head] / BYTES_PER_SAMPLE) - remaining;
   }
-
+  if(_dc_loops < DC_LOOPS)
+  {
+    out = (gr_complex *)output_items[0];
+    gr_complex loffset = gr_complex(0.0);
+    for(int k = 0; k < noutput_items; k++, out++)
+    {
+        _dc_accum += *out - loffset;
+        _dc_count++;
+        if(_dc_count == _dc_size)
+        {
+            _dc_offset += _dc_accum / float(_dc_size);
+            loffset += _dc_accum / float(_dc_size);
+            _dc_accum = gr_complex(0.0);
+            _dc_count = 0;
+            _dc_loops ++;
+            if(_dc_loops == DC_LOOPS)
+                break;
+        }
+    }
+  }
   return noutput_items;
 }
 
@@ -304,6 +339,7 @@ double miri_source_c::set_sample_rate(double rate)
 {
   if (_dev) {
     mirisdr_set_sample_rate( _dev, (uint32_t)rate );
+    rearm_dcr();
   }
 
   return get_sample_rate();
@@ -415,6 +451,7 @@ double miri_source_c::set_gain( double gain, size_t chan )
 
   if (_dev) {
     mirisdr_set_tuner_gain( _dev, int(rf_gains.clip(gain)) );
+   rearm_dcr();
   }
 
   return get_gain( chan );
@@ -464,6 +501,7 @@ double miri_source_c::set_bandwidth( double bandwidth, size_t chan )
 
   if ( _dev ) {
     mirisdr_set_bandwidth( _dev, uint32_t(bandwidth) );
+    rearm_dcr();
     return get_bandwidth( chan);
   }
 

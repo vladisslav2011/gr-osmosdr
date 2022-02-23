@@ -104,6 +104,7 @@ private:
   void mirisdr_callback(unsigned char *buf, uint32_t len);
   static void _mirisdr_wait(miri_source_c *obj);
   void mirisdr_wait();
+  void rearm_dcr();
 
   mirisdr_dev_t *_dev;
   gr::thread::thread _thread;
@@ -123,6 +124,11 @@ private:
   unsigned int _skipped;
   double _freq_corr;
   double  _center_freq;
+  gr_complex _dc_offset;
+  gr_complex _dc_accum;
+  int _dc_loops;
+  int _dc_count;
+  int _dc_size;
 
 };
 
