@@ -176,6 +176,7 @@ find_package(GnuradioFuncube)
 find_package(SoapySDR NO_MODULE)
 find_package(LibFreeSRP)
 find_package(LibXTRX)
+find_package(LibSDDC)
 find_package(Doxygen)
 
     # Python
