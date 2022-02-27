@@ -255,6 +255,14 @@ GR_INCLUDE_SUBDIRECTORY(freesrp)
 endif(ENABLE_FREESRP)
 
 ########################################################################
+# Setup NGRX component
+########################################################################
+GR_REGISTER_COMPONENT("NGRX support" ENABLE_NGRX LIBSDDC_FOUND)
+if(ENABLE_NGRX)
+GR_INCLUDE_SUBDIRECTORY(ngrx)
+endif(ENABLE_NGRX)
+
+########################################################################
 # Setup configuration file
 ########################################################################
 ADD_DEFINITIONS(-DHAVE_CONFIG_H=1)
