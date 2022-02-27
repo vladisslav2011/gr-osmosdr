@@ -266,6 +266,14 @@ if(ENABLE_XTRX)
 endif(ENABLE_XTRX)
 
 ########################################################################
+# Setup NGRX component
+########################################################################
+GR_REGISTER_COMPONENT("NGRX support" ENABLE_NGRX LIBSDDC_FOUND)
+if(ENABLE_NGRX)
+GR_INCLUDE_SUBDIRECTORY(ngrx)
+endif(ENABLE_NGRX)
+
+########################################################################
 # Setup configuration file
 ########################################################################
 add_definitions(-DHAVE_CONFIG_H=1)

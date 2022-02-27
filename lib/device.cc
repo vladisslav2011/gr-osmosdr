@@ -89,6 +89,10 @@
 #include <freesrp_source_c.h>
 #endif
 
+#ifdef ENABLE_NGRX
+#include <ngrx_source_c.h>
+#endif
+
 #include "arg_helpers.h"
 
 using namespace osmosdr;
@@ -187,6 +191,10 @@ devices_t device::find(const device_t &hint)
 #endif
 #ifdef ENABLE_FREESRP
   for (std::string dev : freesrp_source_c::get_devices())
+    devices.push_back( device_t(dev) );
+#endif
+#ifdef ENABLE_NGRX
+  BOOST_FOREACH( std::string dev, ngrx_source_c::get_devices() )
     devices.push_back( device_t(dev) );
 #endif
 #ifdef ENABLE_SOAPY
