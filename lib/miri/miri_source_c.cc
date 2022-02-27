@@ -408,7 +408,8 @@ double miri_source_c::set_center_freq( double freq, size_t chan )
 double miri_source_c::get_center_freq( size_t chan )
 {
   if (_dev)
-      return double(mirisdr_get_center_freq( _dev )) / (1.0 + _freq_corr * 0.000001);
+//      return double(mirisdr_get_center_freq( _dev )) / (1.0 + _freq_corr * 0.000001);
+    return _center_freq;
   return 0;
 }
 
