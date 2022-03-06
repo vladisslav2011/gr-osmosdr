@@ -384,7 +384,7 @@ std::vector<std::string> ngrx_source_c::get_gain_names( size_t chan )
 {
   std::vector< std::string > gains;
 
-  gains += "HF";
+  gains += "IF";
   gains += "Tuner";
 
   return gains;
@@ -405,7 +405,7 @@ osmosdr::gain_range_t ngrx_source_c::get_gain_range( const std::string & name, s
 {
   osmosdr::gain_range_t range;
   if (_dev) {
-    if(name == "HF")
+    if(name == "IF")
         return osmosdr::gain_range_t(-20, 40, 1);
     if(name == "Tuner")
         return osmosdr::gain_range_t(-20, 40, 1);
@@ -444,7 +444,7 @@ double ngrx_source_c::set_gain( double gain, size_t chan )
 double ngrx_source_c::set_gain( double gain, const std::string & name, size_t chan)
 {
   if (_dev) {
-    if(name == "HF")
+    if(name == "IF")
     {
         sddc_set_tuner_if_attenuation(_dev, gain);
         return sddc_get_tuner_if_attenuation(_dev);
