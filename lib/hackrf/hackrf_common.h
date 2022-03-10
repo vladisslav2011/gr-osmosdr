@@ -89,6 +89,7 @@ protected:
   void stop();
 
   hackrf_sptr _dev;
+  double _sample_rate;
 
 private:
   static void close(void *dev);
@@ -99,7 +100,6 @@ private:
   static std::map<std::string, std::weak_ptr<hackrf_device>> _devs;
   static std::mutex _devs_mutex;
 
-  double _sample_rate;
   double _center_freq;
   double _freq_corr;
   bool _auto_gain;
