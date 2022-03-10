@@ -200,7 +200,6 @@ void ngrx_source_c::sddc_callback(unsigned char *buf, uint32_t len)
     _buf_lens[buf_tail] = len;
 
     if (_buf_used == _buf_num) {
-      //std::cerr << "b="<<len << std::endl;
       std::cerr << "O" << std::flush;
       _buf_head = (_buf_head + 1) % _buf_num;
     } else {
@@ -225,6 +224,7 @@ int ngrx_source_c::work( int noutput_items,
                         gr_vector_void_star &output_items )
 {
   gr_complex *out = (gr_complex *)output_items[0];
+  int processed = 0;
 
   {
     boost::mutex::scoped_lock lock( _buf_mutex );
@@ -244,6 +244,7 @@ int ngrx_source_c::work( int noutput_items,
 
     _buf_offset += noutput_items;
     _samp_avail -= noutput_items;
+    processed += noutput_items;
   } else {
     for (int i = 0; i < _samp_avail; i++)
       *out++ = *(buf + i) - _dc_offset;
@@ -258,19 +259,23 @@ int ngrx_source_c::work( int noutput_items,
     buf = (gr_complex *)_buf[_buf_head];
 
     int remaining = noutput_items - _samp_avail;
+    processed += _samp_avail;
+    if(remaining > (int)_buf_lens[_buf_head] / BYTES_PER_SAMPLE)
+      remaining = _buf_lens[_buf_head] / BYTES_PER_SAMPLE;
 
     for (int i = 0; i < remaining; i++)
       *out++ = *(buf + i) - _dc_offset;
 
     _buf_offset = remaining;
     _samp_avail = (_buf_lens[_buf_head] / BYTES_PER_SAMPLE) - remaining;
+    processed += remaining;
   }
   if(0)
   if(_dc_loops < DC_LOOPS)
   {
     out = (gr_complex *)output_items[0];
     gr_complex loffset = gr_complex(0.0);
-    for(int k = 0; k < noutput_items; k++, out++)
+    for(int k = 0; k < processed; k++, out++)
     {
         _dc_accum += *out - loffset;
         _dc_count++;
@@ -286,7 +291,7 @@ int ngrx_source_c::work( int noutput_items,
         }
     }
   }
-  return noutput_items;
+  return processed;
 }
 
 std::vector<std::string> ngrx_source_c::get_devices()
