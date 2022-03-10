@@ -220,6 +220,7 @@ int hackrf_source_c::work( int noutput_items,
   gr_complex *out = (gr_complex *)output_items[0];
 
   bool running = false;
+  int written = 0;
 
   if ( _dev.get() )
     running = (hackrf_is_streaming( _dev.get() ) == HACKRF_TRUE);
@@ -250,6 +251,7 @@ int hackrf_source_c::work( int noutput_items,
 
     _buf_offset += noutput_items;
     _samp_avail -= noutput_items;
+    written += noutput_items;
   } else {
     for (int i = 0; i < _samp_avail; ++i)
       *out++ = TO_COMPLEX( buf + i*BYTES_PER_SAMPLE );
@@ -263,18 +265,22 @@ int hackrf_source_c::work( int noutput_items,
 
     buf = _buf[_buf_head];
 
+    written += _samp_avail;
     int remaining = noutput_items - _samp_avail;
+    if(remaining > int(_buf_len / BYTES_PER_SAMPLE))
+        remaining = _buf_len / BYTES_PER_SAMPLE;
 
     for (int i = 0; i < remaining; ++i)
       *out++ = TO_COMPLEX( buf + i*BYTES_PER_SAMPLE );
 
     _buf_offset = remaining;
     _samp_avail = (_buf_len / BYTES_PER_SAMPLE) - remaining;
+    written += remaining;
   }
   if((_dc_offset_mode == 2) && (_avg_loops < 5 ))
   {
     out = (gr_complex *)output_items[0];
-    for (int i = 0; i < noutput_items; ++i)
+    for (int i = 0; i < written; ++i)
     {
         _avg+= *out++;
         _avgcount++;
@@ -289,7 +295,7 @@ int hackrf_source_c::work( int noutput_items,
     }
   }
   
-  return noutput_items;
+  return written;
 }
 
 std::vector<std::string> hackrf_source_c::get_devices()
