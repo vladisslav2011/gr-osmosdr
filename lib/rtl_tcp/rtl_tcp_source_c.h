@@ -92,6 +92,7 @@ public:
 
 private:
   int d_socket;		  // handle to socket
+  int d_payload_size;  // maximum transmission unit (packet length)
   double _freq, _rate, _gain, _corr;
   bool _no_tuner;
   bool _auto_gain;
