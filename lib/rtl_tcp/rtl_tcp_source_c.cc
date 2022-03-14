@@ -146,13 +146,13 @@ rtl_tcp_source_c::rtl_tcp_source_c(const std::string &args) :
                  gr::io_signature::make(0, 0, 0),
                  gr::io_signature::make(1, 1, sizeof (gr_complex))),
   d_socket(-1),
+  d_payload_size(16384),
   _no_tuner(false),
   _auto_gain(false),
   _if_gain(0)
 {
   std::string host = "127.0.0.1";
   unsigned short port = 1234;
-  int payload_size = 16384;
   unsigned int direct_samp = 0, offset_tune = 0;
   int bias_tee = 0;
 
@@ -175,7 +175,7 @@ rtl_tcp_source_c::rtl_tcp_source_c(const std::string &args) :
   }
 
   if (dict.count("psize"))
-    payload_size = boost::lexical_cast< int >( dict["psize"] );
+    d_payload_size = boost::lexical_cast< int >( dict["psize"] );
 
   if (dict.count("direct_samp"))
     direct_samp = boost::lexical_cast< unsigned int >( dict["direct_samp"] );
@@ -192,8 +192,8 @@ rtl_tcp_source_c::rtl_tcp_source_c(const std::string &args) :
   if (0 == port)
     port = 1234;
 
-  if (payload_size <= 0)
-    payload_size = 16384;
+  if (d_payload_size <= 0)
+    d_payload_size = 16384;
 
 #if defined(USING_WINSOCK) // for Windows (with MinGW)
   // initialize winsock DLL
@@ -222,7 +222,7 @@ rtl_tcp_source_c::rtl_tcp_source_c(const std::string &args) :
     report_error("rtl_tcp_source_f/getaddrinfo",
                  "can't initialize source socket" );
 
-  d_temp_buff = new unsigned char[payload_size];   // allow it to hold up to payload_size bytes
+  d_temp_buff = new unsigned char[d_payload_size];   // allow it to hold up to payload_size bytes
   d_LUT = new float[0x100];
   for (int i = 0; i < 0x100; ++i)
     d_LUT[i] = (((float)(i & 0xff)) - 127.4f) * (1.0f / 128.0f);
@@ -339,7 +339,8 @@ int rtl_tcp_source_c::work(int noutput_items,
 			   gr_vector_void_star &output_items)
 {
   gr_complex *out = (gr_complex *)output_items[0];
-  int bytesleft = noutput_items * BYTES_PER_SAMPLE;
+  int bytesleft = std::min(d_payload_size, noutput_items * BYTES_PER_SAMPLE);
+  noutput_items = bytesleft / BYTES_PER_SAMPLE;
   int index = 0;
   int receivedbytes = 0;
   while (bytesleft > 0) {
