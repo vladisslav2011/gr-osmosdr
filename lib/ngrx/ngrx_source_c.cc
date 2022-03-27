@@ -96,11 +96,19 @@ ngrx_source_c::ngrx_source_c (const std::string &args)
     _dc_size(0)
 {
   int dev_index = 0;
+  int hf_bias = 0;
+  int vhf_bias = 0;
 
   dict_t dict = params_to_dict(args);
 
   if (dict.count("sddc"))
     dev_index = boost::lexical_cast< unsigned int >( dict["sddc"] );
+
+  if (dict.count("hfbias"))
+    hf_bias = boost::lexical_cast< unsigned int >( dict["hfbias"] );
+
+  if (dict.count("vhfbias"))
+    vhf_bias = boost::lexical_cast< unsigned int >( dict["vhfbias"] );
 
   _buf_num = _buf_head = _buf_used = _buf_offset = 0;
   _samp_avail = BUF_SIZE / BYTES_PER_SAMPLE;
@@ -146,6 +154,8 @@ ngrx_source_c::ngrx_source_c (const std::string &args)
       _buf[i] = (unsigned short *) malloc(BUF_SIZE);
   }
   sddc_set_async_params(_dev, 0, 0, ngrx_source_c::_sddc_callback, this);
+  sddc_set_hf_bias(_dev, hf_bias);
+  sddc_set_vhf_bias(_dev, vhf_bias);
   sddc_start_streaming(_dev);
 }
 
@@ -157,6 +167,8 @@ ngrx_source_c::~ngrx_source_c ()
   if (_dev) {
     _running = false;
     sddc_stop_streaming(_dev);
+    sddc_set_hf_bias(_dev, 0);
+    sddc_set_vhf_bias(_dev, 0);
     sddc_close( _dev );
     _dev = NULL;
   }
@@ -498,20 +510,12 @@ std::string ngrx_source_c::get_antenna( size_t chan )
 
 double ngrx_source_c::set_bandwidth( double bandwidth, size_t chan )
 {
-  if ( bandwidth == 0.0 ) /* bandwidth of 0 means automatic filter selection */
-    bandwidth = sddc_get_sample_rate( _dev ) * 0.75; /* select narrower filters to prevent aliasing */
-
-  if ( _dev ) {
-    //mirisdr_set_bandwidth( _dev, uint32_t(bandwidth) );
-    rearm_dcr();
-    return get_bandwidth( chan);
-  }
-
+  sddc_set_tuner_bw(_dev, bandwidth);
   return 0.0;
 }
 
 double ngrx_source_c::get_bandwidth( size_t chan )
 {
-  //return double(sddc_get_bandwidth( _dev ));
+  return double(sddc_get_tuner_bw( _dev ));
   return 0;
 }
