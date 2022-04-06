@@ -96,6 +96,7 @@ miri_source_c::miri_source_c (const std::string &args)
 {
   int ret;
   unsigned int dev_index = 0;
+  int bias = 0;
 
   dict_t dict = params_to_dict(args);
 
@@ -105,6 +106,8 @@ miri_source_c::miri_source_c (const std::string &args)
   _buf_num = _buf_head = _buf_used = _buf_offset = 0;
   _samp_avail = BUF_SIZE / BYTES_PER_SAMPLE;
 
+  if (dict.count("bias"))
+    bias = boost::lexical_cast< unsigned int >( dict["bias"] );
   if (dict.count("buffers"))
     _buf_num = boost::lexical_cast< unsigned int >( dict["buffers"] );
 
@@ -140,6 +143,7 @@ miri_source_c::miri_source_c (const std::string &args)
   if (ret < 0)
     throw std::runtime_error("Failed to enable manual gain mode.");
 #endif
+  mirisdr_set_bias( _dev, bias );
   ret = mirisdr_reset_buffer( _dev );
   if (ret < 0)
     throw std::runtime_error("Failed to reset usb buffers.");
@@ -161,6 +165,7 @@ miri_source_c::~miri_source_c ()
 {
   if (_dev) {
     _running = false;
+    mirisdr_set_bias( _dev, 0 );
     mirisdr_cancel_async( _dev );
     _thread.join();
     mirisdr_close( _dev );
