@@ -248,6 +248,7 @@ int miri_source_c::work( int noutput_items,
                         gr_vector_void_star &output_items )
 {
   gr_complex *out = (gr_complex *)output_items[0];
+  int processed = 0;
 
   {
     std::unique_lock<std::mutex> lock( _buf_mutex );
@@ -269,6 +270,7 @@ int miri_source_c::work( int noutput_items,
 
     _buf_offset += noutput_items * 2;
     _samp_avail -= noutput_items;
+    processed += noutput_items;
   } else {
     for (int i = 0; i < _samp_avail; i++)
       *out++ = gr_complex( float(*(buf + i * 2 + 0)) * (1.0f/32768.0f),
@@ -282,9 +284,13 @@ int miri_source_c::work( int noutput_items,
       _buf_used--;
     }
 
+    processed += _samp_avail;
     buf = (short *)_buf[_buf_head];
+    int buf_len = (_buf_lens[_buf_head] / BYTES_PER_SAMPLE);
 
     int remaining = noutput_items - _samp_avail;
+    if(remaining > buf_len)
+      remaining = buf_len;
 
     for (int i = 0; i < remaining; i++)
       *out++ = gr_complex( float(*(buf + i * 2 + 0)) * (1.0f/32768.0f),
@@ -292,13 +298,14 @@ int miri_source_c::work( int noutput_items,
                            _dc_offset;
 
     _buf_offset = remaining * 2;
-    _samp_avail = (_buf_lens[_buf_head] / BYTES_PER_SAMPLE) - remaining;
+    _samp_avail = buf_len - remaining;
+    processed += remaining;
   }
   if(_dc_loops < DC_LOOPS)
   {
     out = (gr_complex *)output_items[0];
     gr_complex loffset = gr_complex(0.0);
-    for(int k = 0; k < noutput_items; k++, out++)
+    for(int k = 0; k < processed; k++, out++)
     {
         _dc_accum += *out - loffset;
         _dc_count++;
@@ -314,7 +321,7 @@ int miri_source_c::work( int noutput_items,
         }
     }
   }
-  return noutput_items;
+  return processed;
 }
 
 std::vector<std::string> miri_source_c::get_devices()
