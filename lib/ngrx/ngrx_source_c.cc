@@ -212,7 +212,7 @@ void ngrx_source_c::sddc_callback(unsigned char *buf, uint32_t len)
     _buf_lens[buf_tail] = len;
 
     if (_buf_used == _buf_num) {
-      std::cerr << "O" << std::flush;
+//      std::cerr << "O" << std::flush;
       _buf_head = (_buf_head + 1) % _buf_num;
     } else {
       _buf_used++;
@@ -343,6 +343,7 @@ double ngrx_source_c::set_sample_rate(double rate)
   if (_dev) {
     sddc_set_sample_rate( _dev, (uint32_t)rate);
     rearm_dcr();
+    set_output_multiple(rate/100);
   }
 
   return get_sample_rate();
