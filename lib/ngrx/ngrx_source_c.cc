@@ -98,6 +98,8 @@ ngrx_source_c::ngrx_source_c (const std::string &args)
   int dev_index = 0;
   int hf_bias = 0;
   int vhf_bias = 0;
+  int random_on = 0;
+  int dither_on = 0;
 
   dict_t dict = params_to_dict(args);
 
@@ -105,10 +107,16 @@ ngrx_source_c::ngrx_source_c (const std::string &args)
     dev_index = boost::lexical_cast< unsigned int >( dict["sddc"] );
 
   if (dict.count("hfbias"))
-    hf_bias = boost::lexical_cast< unsigned int >( dict["hfbias"] );
+    hf_bias = boost::lexical_cast< int >( dict["hfbias"] );
 
   if (dict.count("vhfbias"))
-    vhf_bias = boost::lexical_cast< unsigned int >( dict["vhfbias"] );
+    vhf_bias = boost::lexical_cast< int >( dict["vhfbias"] );
+
+  if (dict.count("dither"))
+    dither_on = boost::lexical_cast< int >( dict["dither"] );
+
+  if (dict.count("random"))
+    random_on = boost::lexical_cast< int >( dict["random"] );
 
   _buf_num = _buf_head = _buf_used = _buf_offset = 0;
   _samp_avail = BUF_SIZE / BYTES_PER_SAMPLE;
@@ -156,6 +164,8 @@ ngrx_source_c::ngrx_source_c (const std::string &args)
   sddc_set_async_params(_dev, 0, 0, ngrx_source_c::_sddc_callback, this);
   sddc_set_hf_bias(_dev, hf_bias);
   sddc_set_vhf_bias(_dev, vhf_bias);
+  sddc_set_adc_dither(_dev, dither_on);
+  sddc_set_adc_random(_dev, random_on);
   sddc_start_streaming(_dev);
 }
 
