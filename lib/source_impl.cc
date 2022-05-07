@@ -513,6 +513,15 @@ double source_impl::set_sample_rate(double rate)
       }
     }
 #endif
+    int output_multiple = sample_rate / (8192 * 20);
+    if (output_multiple <= 0)
+      output_multiple = 1;
+    BOOST_FOREACH( source_iface *dev, _devs )
+    {
+      gr::block * bdev = dynamic_cast<gr::block *>(dev);
+      if(bdev)
+        bdev->set_output_multiple(output_multiple * 8192);
+    }
 
     _sample_rate = sample_rate;
   }
