@@ -466,7 +466,7 @@ double ngrx_source_c::set_gain( double gain, size_t chan )
 
   if (_dev) {
 //    sddc_set_tuner_gain( _dev, int(rf_gains.clip(gain)) );
-   rearm_dcr();
+//   rearm_dcr();
   }
 
   return get_gain( chan );
@@ -501,6 +501,18 @@ double ngrx_source_c::get_gain( size_t chan )
 double ngrx_source_c::get_gain( const std::string & name, size_t chan )
 {
   return get_gain( chan );
+}
+
+double ngrx_source_c::set_if_gain( double gain, size_t chan )
+{
+    sddc_set_tuner_rf_attenuation(_dev, gain);
+    return sddc_get_tuner_rf_attenuation(_dev);
+}
+
+double ngrx_source_c::set_bb_gain( double gain, size_t chan )
+{
+    sddc_set_tuner_if_attenuation(_dev, gain);
+    return sddc_get_tuner_if_attenuation(_dev);
 }
 
 std::vector< std::string > ngrx_source_c::get_antennas( size_t chan )
