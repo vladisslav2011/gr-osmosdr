@@ -51,7 +51,6 @@ using namespace boost::assign;
 #define BYTES_PER_SAMPLE  8
 
 #define DC_LOOPS 5
-#define FW_PATH "/home/vlad/warez/ExtIO_sddc/SDDC_FX3.img"
 
 /*
  * Create a new instance of ngrx_source_c and return
@@ -100,6 +99,7 @@ ngrx_source_c::ngrx_source_c (const std::string &args)
   int vhf_bias = 0;
   int random_on = 0;
   int dither_on = 0;
+  const char * fw_path = nullptr;
 
   dict_t dict = params_to_dict(args);
 
@@ -117,6 +117,9 @@ ngrx_source_c::ngrx_source_c (const std::string &args)
 
   if (dict.count("random"))
     random_on = boost::lexical_cast< int >( dict["random"] );
+
+  if (dict.count("fw"))
+    fw_path = dict["fw"].c_str();
 
   _buf_num = _buf_head = _buf_used = _buf_offset = 0;
   _samp_avail = BUF_SIZE / BYTES_PER_SAMPLE;
@@ -140,7 +143,7 @@ ngrx_source_c::ngrx_source_c (const std::string &args)
             << std::endl;
 
   _dev = NULL;
-  _dev = sddc_open( dev_index , FW_PATH);
+  _dev = sddc_open( dev_index , fw_path);
   if (!_dev)
     throw std::runtime_error("Failed to open sddc device.");
 #if 0
