@@ -124,9 +124,13 @@ miri_source_c::miri_source_c (const std::string &args)
             << std::endl;
 
   _dev = NULL;
-  ret = mirisdr_open( &_dev, MIRISDR_HW_SDRPLAY, dev_index );
+  ret = mirisdr_open( &_dev, dev_index );
   if (ret < 0)
     throw std::runtime_error("Failed to open mirisdr device.");
+#ifdef HAVE_SET_HW_FALVOUR
+  if (dict.count("flavour"))
+    mirisdr_set_hw_flavour( _dev, mirisdr_hw_flavour_t(boost::lexical_cast< unsigned int >( dict["flavour"] )));
+#endif
 #if 0
   ret = mirisdr_set_sample_rate( _dev, 500000 );
   if (ret < 0)
