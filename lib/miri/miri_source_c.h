@@ -129,6 +129,7 @@ private:
   int _dc_loops;
   int _dc_count;
   int _dc_size;
+  bool _gain_mode;
 
 };
 

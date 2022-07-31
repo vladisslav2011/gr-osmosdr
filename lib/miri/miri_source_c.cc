@@ -92,7 +92,8 @@ miri_source_c::miri_source_c (const std::string &args)
     _dc_accum(0.0),
     _dc_loops(0),
     _dc_count(0),
-    _dc_size(0)
+    _dc_size(0),
+    _gain_mode(0)
 {
   int ret;
   unsigned int dev_index = 0;
@@ -108,6 +109,8 @@ miri_source_c::miri_source_c (const std::string &args)
 
   if (dict.count("bias"))
     bias = boost::lexical_cast< unsigned int >( dict["bias"] );
+  if (dict.count("gain_mode"))
+    _gain_mode = boost::lexical_cast< unsigned int >( dict["gain_mode"] );
   if (dict.count("buffers"))
     _buf_num = boost::lexical_cast< unsigned int >( dict["buffers"] );
 
@@ -133,6 +136,8 @@ miri_source_c::miri_source_c (const std::string &args)
 #ifdef HAVE_SET_HW_FALVOUR
   if (dict.count("flavour"))
     mirisdr_set_hw_flavour( _dev, mirisdr_hw_flavour_t(boost::lexical_cast< unsigned int >( dict["flavour"] )));
+  else
+    mirisdr_set_hw_flavour( _dev, mirisdr_hw_flavour_t(1));
 #endif
 #if 0
   ret = mirisdr_set_sample_rate( _dev, 500000 );
@@ -346,7 +351,13 @@ osmosdr::meta_range_t miri_source_c::get_sample_rates()
 {
   osmosdr::meta_range_t range;
 
-  range += osmosdr::range_t( 8000000 ); // known to work
+  range += osmosdr::range_t( 1300000 );
+  range += osmosdr::range_t( 2000000 );
+  range += osmosdr::range_t( 4000000 );
+  range += osmosdr::range_t( 5000000 );
+  range += osmosdr::range_t( 6000000 );
+  range += osmosdr::range_t( 8000000 );
+  range += osmosdr::range_t( 10000000 );
 
   return range;
 }
@@ -415,11 +426,10 @@ double miri_source_c::get_freq_corr( size_t chan )
 
 std::vector<std::string> miri_source_c::get_gain_names( size_t chan )
 {
-  std::vector< std::string > gains;
-
-  gains += "LNA";
-
-  return gains;
+  if(_gain_mode)
+    return std::vector< std::string > ({"LNA","MIXBUFFER","MIXER","BASEBAND"});
+  else
+    return std::vector< std::string > ({"LNA"});
 }
 
 osmosdr::gain_range_t miri_source_c::get_gain_range( size_t chan )
@@ -442,6 +452,25 @@ osmosdr::gain_range_t miri_source_c::get_gain_range( size_t chan )
 
 osmosdr::gain_range_t miri_source_c::get_gain_range( const std::string & name, size_t chan )
 {
+  if (_gain_mode)
+  {
+    if ( "LNA" == name ) {
+        return osmosdr::gain_range_t( 0,24, 24 );
+    }
+
+    if ( "MIXBUFFER" == name ) {
+        return osmosdr::gain_range_t( 0, 18, 6 );
+    }
+
+    if ( "MIXER" == name ) {
+        return osmosdr::gain_range_t( 0, 19, 19 );
+    }
+
+    if ( "BASEBAND" == name ) {
+        return osmosdr::gain_range_t( 0, 59, 1 );
+    }
+  }
+
   return get_gain_range( chan );
 }
 
@@ -475,6 +504,25 @@ double miri_source_c::set_gain( double gain, size_t chan )
 
 double miri_source_c::set_gain( double gain, const std::string & name, size_t chan)
 {
+  if (_gain_mode)
+  {
+    if ( "LNA" == name ) {
+        return mirisdr_set_lna_gain(_dev, gain);
+    }
+
+    if ( "MIXBUFFER" == name ) {
+        return mirisdr_set_mixbuffer_gain(_dev, gain);
+    }
+
+    if ( "MIXER" == name ) {
+        return mirisdr_set_mixer_gain(_dev, gain);
+    }
+
+    if ( "BASEBAND" == name ) {
+        return mirisdr_set_baseband_gain(_dev, gain);
+    }
+  }
+
   return set_gain( gain, chan );
 }
 
@@ -488,6 +536,25 @@ double miri_source_c::get_gain( size_t chan )
 
 double miri_source_c::get_gain( const std::string & name, size_t chan )
 {
+  if (_gain_mode)
+  {
+    if ( "LNA" == name ) {
+        return mirisdr_get_lna_gain(_dev);
+    }
+
+    if ( "MIXBUFFER" == name ) {
+        return mirisdr_get_mixbuffer_gain(_dev);
+    }
+
+    if ( "MIXER" == name ) {
+        return mirisdr_get_mixer_gain(_dev);
+    }
+
+    if ( "BASEBAND" == name ) {
+        return mirisdr_get_baseband_gain(_dev);
+    }
+  }
+
   return get_gain( chan );
 }
 
