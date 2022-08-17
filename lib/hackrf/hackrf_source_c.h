@@ -128,9 +128,6 @@ private:
   void hackrf_wait();
   void update_lut();
 
-  static int _usage;
-  static boost::mutex _usage_mutex;
-
   std::vector<float> _lut_i;
   std::vector<float> _lut_q;
 
