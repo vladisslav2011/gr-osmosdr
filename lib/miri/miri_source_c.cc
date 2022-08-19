@@ -506,6 +506,7 @@ double miri_source_c::set_gain( double gain, const std::string & name, size_t ch
 {
   if (_gain_mode)
   {
+    rearm_dcr();
     if ( "LNA" == name ) {
         return mirisdr_set_lna_gain(_dev, gain);
     }
