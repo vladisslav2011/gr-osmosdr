@@ -71,10 +71,12 @@ soapy_source_c::soapy_source_c (const std::string &args)
     std::vector<size_t> channels;
     for (size_t i = 0; i < _nchan; i++) channels.push_back(i);
     _stream = _device->setupStream(SOAPY_SDR_RX, "CF32", channels);
+    _device->activateStream(_stream);
 }
 
 soapy_source_c::~soapy_source_c(void)
 {
+    _device->deactivateStream(_stream);
     _device->closeStream(_stream);
     boost::mutex::scoped_lock l(get_soapy_maker_mutex());
     SoapySDR::Device::unmake(_device);
@@ -82,12 +84,12 @@ soapy_source_c::~soapy_source_c(void)
 
 bool soapy_source_c::start()
 {
-    return _device->activateStream(_stream) == 0;
+    return true;
 }
 
 bool soapy_source_c::stop()
 {
-    return _device->deactivateStream(_stream) == 0;
+    return true;
 }
 
 int soapy_source_c::work( int noutput_items,
