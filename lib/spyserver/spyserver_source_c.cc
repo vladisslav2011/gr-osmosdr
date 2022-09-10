@@ -403,7 +403,8 @@ int spyserver_source_c::parse_header(char *buffer, uint32_t length) {
 
   while (length > 0) {
     int to_write = std::min((uint32_t)(sizeof(MessageHeader) - parser_position), length);
-    std::memcpy(&header + parser_position, buffer, to_write);
+    uint8_t * pheader=(uint8_t *)&header;
+    std::memcpy(pheader + parser_position, buffer, to_write);
     length -= to_write;
     buffer += to_write;
     parser_position += to_write;
@@ -540,7 +541,7 @@ void spyserver_source_c::process_client_sync() {
 
 void spyserver_source_c::process_uint8_samples() {
   size_t n_avail, to_copy, num_samples = (header.BodySize) / 2;
-  _fifo_lock.lock();
+  boost::unique_lock<boost::mutex> lock(_fifo_lock);
 
   uint8_t *sample = (uint8_t *)body_buffer;
 
@@ -552,7 +553,6 @@ void spyserver_source_c::process_uint8_samples() {
     _fifo->push_back(gr_complex((*sample - 128.f) / 128.f, (*(sample+1) - 128.f) / 128.f));
     sample += 2;
   }
-  _fifo_lock.unlock();
   if (to_copy) {
     _samp_avail.notify_one();
   }
@@ -564,7 +564,7 @@ void spyserver_source_c::process_uint8_samples() {
 void spyserver_source_c::process_int16_samples() {
   size_t n_avail, to_copy, num_samples = (header.BodySize / 2) / 2;
 
-  _fifo_lock.lock();
+  boost::unique_lock<boost::mutex> lock(_fifo_lock);
 
   int16_t *sample = (int16_t *)body_buffer;
 
@@ -576,7 +576,6 @@ void spyserver_source_c::process_int16_samples() {
     _fifo->push_back(gr_complex(*sample / 32768.f, *(sample+1) / 32768.f));
     sample += 2;
   }
-  _fifo_lock.unlock();
   if (to_copy) {
     _samp_avail.notify_one();
   }
@@ -587,7 +586,7 @@ void spyserver_source_c::process_int16_samples() {
 
 void spyserver_source_c::process_float_samples() {
   size_t n_avail, to_copy, num_samples = (header.BodySize / 4) / 2;
-  _fifo_lock.lock();
+  boost::unique_lock<boost::mutex> lock(_fifo_lock);
 
   float *sample = (float *)body_buffer;
 
@@ -599,7 +598,6 @@ void spyserver_source_c::process_float_samples() {
     _fifo->push_back(gr_complex(*sample, *(sample+1)));
     sample += 2;
   }
-  _fifo_lock.unlock();
   if (to_copy) {
     _samp_avail.notify_one();
   }
@@ -691,24 +689,19 @@ int spyserver_source_c::work( int noutput_items,
   int n_samples_avail = 0;
   for(int k=0;k<100;k++)
   {
-    {
       /* Wait until we have the requested number of samples */
       n_samples_avail = _fifo->size();
-     }
       if(n_samples_avail < 8192)
       {
-          lock.unlock();
-          std::this_thread::sleep_for(std::chrono::milliseconds(10));
-          lock.lock();
+          _samp_avail.wait_for(lock, boost::chrono::milliseconds(10));
       }
   }
   if(n_samples_avail < noutput_items)
-    noutput_items = n_samples_avail;
-
-  for(int i = 0; i < noutput_items; ++i) {
-    out[i] = _fifo->at(0);
-    _fifo->pop_front();
-  }
+      noutput_items = n_samples_avail;
+   for(int i = 0; i < noutput_items; ++i) {
+      out[i] = _fifo->at(0);
+      _fifo->pop_front();
+}
 
   //std::cerr << "-" << std::flush;
 

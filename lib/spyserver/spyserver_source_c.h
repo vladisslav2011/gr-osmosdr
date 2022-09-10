@@ -129,7 +129,7 @@ public:
   bool get_biast();
 
 private:
-  static constexpr unsigned int BufferSize = 512 * 1024;
+  static constexpr unsigned int BufferSize = 1024 * 1024 * 2;
   char buffer[BufferSize];
   const uint32_t ProtocolVersion = SPYSERVER_PROTOCOL_VERSION;
   const std::string SoftwareID = std::string("gr-osmosdr");
