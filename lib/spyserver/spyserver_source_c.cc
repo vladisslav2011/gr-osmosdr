@@ -127,12 +127,19 @@ spyserver_source_c::spyserver_source_c (const std::string &args)
       port = 5555;
   }
 
+  if (dict.count("bits"))
+    bits = boost::lexical_cast<int>( dict["bits"] );
+  else
+    bits = 8;
+  if((bits!=8)&&(bits!=16))
+    bits = 8;
+
   std::cerr << "SpyServer(" << ip << ", " << port << ")" << std::endl;
   client = tcp_client(ip, port);
 
   connect();
 
-  _fifo = new boost::circular_buffer<gr_complex>(5000000);
+  _fifo = new boost::circular_buffer<gr_complex>(1024*1024*2);
   if (!_fifo) {
     throw std::runtime_error( std::string(__FUNCTION__) + " " +
                               "Failed to allocate a sample FIFO!" );
@@ -222,7 +229,7 @@ void spyserver_source_c::disconnect()
 void spyserver_source_c::on_connect()
 {
   set_setting(SETTING_STREAMING_MODE, { streaming_mode });
-  set_setting(SETTING_IQ_FORMAT, { STREAM_FORMAT_INT16 });
+  set_setting(SETTING_IQ_FORMAT, { (bits==8)?STREAM_FORMAT_UINT8:STREAM_FORMAT_INT16 });
   // set_setting(SETTING_FFT_FORMAT, { STREAM_FORMAT_UINT8 });
   //set_setting(SETTING_FFT_DISPLAY_PIXELS, { displayPixels });
   //set_setting(SETTING_FFT_DB_OFFSET, { fftOffset });
@@ -304,7 +311,6 @@ void spyserver_source_c::thread_loop() {
   parser_phase = AcquiringHeader;
   parser_position = 0;
 
-  char buffer[BufferSize];
   try {
     while(!terminated) {
       if (terminated) {
@@ -316,6 +322,7 @@ void spyserver_source_c::thread_loop() {
         client.receive_data(buffer, availableData);
         parse_message(buffer, availableData);
       }
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
   } catch (std::exception &e) {
     std::cerr << "SpyServer: Error on ThreadLoop: " << e.what() << std::endl;
@@ -533,11 +540,11 @@ void spyserver_source_c::process_uint8_samples() {
   uint8_t *sample = (uint8_t *)body_buffer;
 
   n_avail = _fifo->capacity() - _fifo->size();
-  to_copy = (n_avail < num_samples ? n_avail : num_samples / 2);
+  to_copy = (n_avail < num_samples ? n_avail : num_samples);
 
   for (size_t i=0; i < to_copy; i++)
   {
-    _fifo->push_back(gr_complex(*sample - 128.f / 128.f, *(sample+1) - 128.f / 128.f));
+    _fifo->push_back(gr_complex((*sample - 128.f) / 128.f, (*(sample+1) - 128.f) / 128.f));
     sample += 2;
   }
   _fifo_lock.unlock();
@@ -688,9 +695,10 @@ int spyserver_source_c::work( int noutput_items,
   /* Wait until we have the requested number of samples */
   int n_samples_avail = _fifo->size();
 
-  while (n_samples_avail < noutput_items) {
-    _samp_avail.wait(lock);
-    n_samples_avail = _fifo->size();
+  if (n_samples_avail < noutput_items) {
+    for(int i = 0; i < noutput_items; ++i)
+      out[i] = gr_complex(0,0);
+    return noutput_items;
   }
 
   for(int i = 0; i < noutput_items; ++i) {

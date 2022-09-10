@@ -127,7 +127,7 @@ void tcp_client::receive_data(char *data, int length) {
     if (n == 0) {
         throw std::runtime_error("Client Disconnected");
     } else if (n != length) {
-        throw std::runtime_error("Socket Error Code " + std::to_string(errno));
+        throw std::runtime_error("receive_data Error Code " + std::to_string(errno));
     }
 }
 
@@ -136,7 +136,7 @@ void tcp_client::send_data(char * data, int length) {
     if (n == 0) {
         throw std::runtime_error("Client Disconnected");
     } else if (n != length) {
-        throw std::runtime_error("Socket Error Code " + std::to_string(errno));
+        throw std::runtime_error("send_data Error Code " + std::to_string(errno));
     }
 }
 
@@ -152,7 +152,7 @@ uint64_t tcp_client::available_data() {
         case EINVAL:
         case EFAULT:
         case ENOTTY:
-        throw std::runtime_error("Socket Error Code " + std::to_string(ret));
+        throw std::runtime_error("available_data Error Code " + std::to_string(ret));
             break;
         case EBADF:
         throw std::runtime_error("Client Disconnected");

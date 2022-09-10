@@ -129,7 +129,8 @@ public:
   bool get_biast();
 
 private:
-  static constexpr unsigned int BufferSize = 64 * 1024;
+  static constexpr unsigned int BufferSize = 512 * 1024;
+  char buffer[BufferSize];
   const uint32_t ProtocolVersion = SPYSERVER_PROTOCOL_VERSION;
   const std::string SoftwareID = std::string("gr-osmosdr");
   const std::string NameNoDevice = std::string("SpyServer - No Device");
@@ -201,6 +202,7 @@ private:
   double _center_freq;
   double _gain;
   double _digitalGain;
+  int bits;
 };
 
 #endif /* INCLUDED_SPYSERVER_SOURCE_C_H */
