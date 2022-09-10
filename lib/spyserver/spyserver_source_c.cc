@@ -630,7 +630,7 @@ double spyserver_source_c::set_sample_rate(double sampleRate) {
 
 double spyserver_source_c::set_center_freq(double centerFrequency, size_t chan) {
   if (centerFrequency <= 0xFFFFFFFF) {
-    channel_center_frequency = (uint32_t) centerFrequency;
+    _center_freq = channel_center_frequency = (uint32_t) centerFrequency;
     set_setting(SETTING_IQ_FREQUENCY, {channel_center_frequency});
     return centerFrequency;
   }
