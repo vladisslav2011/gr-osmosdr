@@ -145,6 +145,10 @@ spyserver_source_c::spyserver_source_c (const std::string &args)
                               "Failed to allocate a sample FIFO!" );
   }
   std::cerr << "SpyServer: Ready" << std::endl;
+    std::cerr << "SpyServer: Starting Streaming" << std::endl;
+    streaming = true;
+    down_stream_bytes = 0;
+    set_stream_state();
 }
 
 // const std::string &spyserver_source_c::getName() {
@@ -647,6 +651,12 @@ void spyserver_source_c::process_uint8_fft() {
  */
 spyserver_source_c::~spyserver_source_c ()
 {
+  if (streaming) {
+    std::cerr << "SpyServer: Stopping Streaming" << std::endl;
+    streaming = false;
+    down_stream_bytes = 0;
+    set_stream_state();
+  }
   disconnect();
   if (_fifo)
   {
@@ -659,26 +669,12 @@ spyserver_source_c::~spyserver_source_c ()
 
 bool spyserver_source_c::start()
 {
-  if (!streaming) {
-    std::cerr << "SpyServer: Starting Streaming" << std::endl;
-    streaming = true;
-    down_stream_bytes = 0;
-    set_stream_state();
-    return true;
-  }
-  return false;
+  return true;
 }
 
 bool spyserver_source_c::stop()
 {
-  if (streaming) {
-    std::cerr << "SpyServer: Stopping Streaming" << std::endl;
-    streaming = false;
-    down_stream_bytes = 0;
-    set_stream_state();
-    return true;
-  }
-  return false;
+  return true;
 }
 
 int spyserver_source_c::work( int noutput_items,
