@@ -149,6 +149,7 @@ spyserver_source_c::spyserver_source_c (const std::string &args)
     streaming = true;
     down_stream_bytes = 0;
     set_stream_state();
+    set_output_multiple(2048);
 }
 
 // const std::string &spyserver_source_c::getName() {
@@ -687,15 +688,22 @@ int spyserver_source_c::work( int noutput_items,
     return WORK_DONE;
 
   boost::unique_lock<boost::mutex> lock(_fifo_lock);
-
-  /* Wait until we have the requested number of samples */
-  int n_samples_avail = _fifo->size();
-
-  if (n_samples_avail < noutput_items) {
-    for(int i = 0; i < noutput_items; ++i)
-      out[i] = gr_complex(0,0);
-    return noutput_items;
+  int n_samples_avail = 0;
+  for(int k=0;k<100;k++)
+  {
+    {
+      /* Wait until we have the requested number of samples */
+      n_samples_avail = _fifo->size();
+     }
+      if(n_samples_avail < 8192)
+      {
+          lock.unlock();
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+          lock.lock();
+      }
   }
+  if(n_samples_avail < noutput_items)
+    noutput_items = n_samples_avail;
 
   for(int i = 0; i < noutput_items; ++i) {
     out[i] = _fifo->at(0);
