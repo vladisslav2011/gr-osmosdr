@@ -88,11 +88,11 @@ rtl_source_c::rtl_source_c (const std::string &args)
     _no_tuner(false),
     _auto_gain(false),
     _if_gain(0),
-    _skipped(0)
+    _skipped(0),
+    _bias(0)
 {
   int ret;
   int index;
-  int bias_tee = 0;
   unsigned int dev_index = 0, rtl_freq = 0, tuner_freq = 0, direct_samp = 0;
   unsigned int offset_tune = 0;
   char manufact[256];
@@ -152,7 +152,7 @@ rtl_source_c::rtl_source_c (const std::string &args)
     offset_tune = boost::lexical_cast< unsigned int >( dict["offset_tune"] );
 
   if (dict.count("bias"))
-    bias_tee = boost::lexical_cast<bool>( dict["bias"] );
+    _bias = boost::lexical_cast<int>( dict["bias"] );
 
   _buf_num = _buf_len = _buf_head = _buf_used = _buf_offset = 0;
 
@@ -221,7 +221,7 @@ rtl_source_c::rtl_source_c (const std::string &args)
       throw std::runtime_error("Failed to enable offset tuning.");
   }
 
-  ret = rtlsdr_set_bias_tee(_dev, bias_tee);
+  ret = rtlsdr_set_bias_tee(_dev, _bias);
   if (ret < 0)
     throw std::runtime_error("Failed to set bias tee.");
 
@@ -524,6 +524,7 @@ std::vector<std::string> rtl_source_c::get_gain_names( size_t chan )
   std::vector< std::string > names;
 
   names += "LNA";
+  names += "BIAS";
 
   if ( _dev ) {
     if ( rtlsdr_get_tuner_type(_dev) == RTLSDR_TUNER_E4000 ) {
@@ -563,6 +564,8 @@ osmosdr::gain_range_t rtl_source_c::get_gain_range( const std::string & name, si
       }
     }
   }
+  if ( "BIAS" == name )
+    return osmosdr::gain_range_t(0,1,1);
 
   return get_gain_range( chan );
 }
@@ -602,6 +605,12 @@ double rtl_source_c::set_gain( double gain, const std::string & name, size_t cha
     return set_if_gain( gain, chan );
   }
 
+  if ("BIAS" == name )
+  {
+    rtlsdr_set_bias_tee(_dev, _bias=gain);
+    return gain;
+  }
+
   return set_gain( gain, chan );
 }
 
@@ -618,6 +627,9 @@ double rtl_source_c::get_gain( const std::string & name, size_t chan )
   if ( "IF" == name ) {
     return _if_gain;
   }
+  
+  if ( "BIAS" == name)
+    return _bias;
 
   return get_gain( chan );
 }
