@@ -93,11 +93,11 @@ miri_source_c::miri_source_c (const std::string &args)
     _dc_loops(0),
     _dc_count(0),
     _dc_size(0),
-    _gain_mode(0)
+    _gain_mode(0),
+    _bias(0)
 {
   int ret;
   unsigned int dev_index = 0;
-  int bias = 0;
 
   dict_t dict = params_to_dict(args);
 
@@ -108,7 +108,7 @@ miri_source_c::miri_source_c (const std::string &args)
   _samp_avail = BUF_SIZE / BYTES_PER_SAMPLE;
 
   if (dict.count("bias"))
-    bias = boost::lexical_cast< unsigned int >( dict["bias"] );
+    _bias = boost::lexical_cast< unsigned int >( dict["bias"] );
   if (dict.count("gain_mode"))
     _gain_mode = boost::lexical_cast< unsigned int >( dict["gain_mode"] );
   if (dict.count("buffers"))
@@ -148,7 +148,7 @@ miri_source_c::miri_source_c (const std::string &args)
   if (ret < 0)
     throw std::runtime_error("Failed to enable manual gain mode.");
 #endif
-  mirisdr_set_bias( _dev, bias );
+  mirisdr_set_bias( _dev, _bias );
   ret = mirisdr_reset_buffer( _dev );
   if (ret < 0)
     throw std::runtime_error("Failed to reset usb buffers.");
@@ -427,9 +427,9 @@ double miri_source_c::get_freq_corr( size_t chan )
 std::vector<std::string> miri_source_c::get_gain_names( size_t chan )
 {
   if(_gain_mode)
-    return std::vector< std::string > ({"LNA","MIXBUFFER","MIXER","BASEBAND"});
+    return std::vector< std::string > ({"LNA","MIXBUFFER","MIXER","BASEBAND","BIAS"});
   else
-    return std::vector< std::string > ({"LNA"});
+    return std::vector< std::string > ({"LNA","BIAS"});
 }
 
 osmosdr::gain_range_t miri_source_c::get_gain_range( size_t chan )
@@ -470,6 +470,12 @@ osmosdr::gain_range_t miri_source_c::get_gain_range( const std::string & name, s
         return osmosdr::gain_range_t( 0, 59, 1 );
     }
   }
+
+  if ("BIAS" == name )
+  {
+     return osmosdr::gain_range_t( 0, 1, 1 );
+  }
+
 
   return get_gain_range( chan );
 }
@@ -524,6 +530,12 @@ double miri_source_c::set_gain( double gain, const std::string & name, size_t ch
     }
   }
 
+  if ("BIAS" == name )
+  {
+    mirisdr_set_bias(_dev, _bias=gain);
+    return gain;
+  }
+
   return set_gain( gain, chan );
 }
 
@@ -554,6 +566,11 @@ double miri_source_c::get_gain( const std::string & name, size_t chan )
     if ( "BASEBAND" == name ) {
         return mirisdr_get_baseband_gain(_dev);
     }
+  }
+
+  if ("BIAS" == name )
+  {
+    return _bias;
   }
 
   return get_gain( chan );

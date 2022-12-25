@@ -130,6 +130,7 @@ private:
   int _dc_count;
   int _dc_size;
   bool _gain_mode;
+  int _bias;
 
 };
 
