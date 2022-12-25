@@ -161,6 +161,7 @@ private:
   gr_complex _avg;
   int _avgcount;
   int _avg_loops;
+  int _bias;
 };
 
 #endif /* INCLUDED_HACKRF_SOURCE_C_H */

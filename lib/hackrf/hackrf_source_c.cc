@@ -100,7 +100,8 @@ hackrf_source_c::hackrf_source_c (const std::string &args)
     _amp_gain(0),
     _lna_gain(0),
     _vga_gain(0),
-    _bandwidth(0)
+    _bandwidth(0),
+    _bias(0)
 {
   int ret;
   std::string hackrf_serial;
@@ -208,15 +209,15 @@ hackrf_source_c::hackrf_source_c (const std::string &args)
 
   // Check device args to find out if bias/phantom power is desired.
   if ( dict.count("bias") ) {
-    bool bias = boost::lexical_cast<bool>( dict["bias"] );
-    ret = hackrf_set_antenna_enable(_dev, static_cast<uint8_t>(bias));
+    _bias = boost::lexical_cast<bool>( dict["bias"] );
+    ret = hackrf_set_antenna_enable(_dev, _bias);
     if ( ret != HACKRF_SUCCESS )
     {
-      std::cerr << "Failed to apply antenna bias voltage state: " << bias << HACKRF_FORMAT_ERROR(ret, "") << std::endl;
+      std::cerr << "Failed to apply antenna bias voltage state: " << _bias << HACKRF_FORMAT_ERROR(ret, "") << std::endl;
     }
     else
     {
-      std::cerr << (bias ? "Enabled" : "Disabled") << " antenna bias voltage" << std::endl;
+      std::cerr << (_bias ? "Enabled" : "Disabled") << " antenna bias voltage" << std::endl;
     }
   }
 
@@ -614,6 +615,7 @@ std::vector<std::string> hackrf_source_c::get_gain_names( size_t chan )
   names += "RF";
   names += "IF";
   names += "BB";
+  names += "BIAS";
 
   return names;
 }
@@ -635,6 +637,10 @@ osmosdr::gain_range_t hackrf_source_c::get_gain_range( const std::string & name,
 
   if ( "BB" == name ) {
     return osmosdr::gain_range_t( 0, 62, 2 );
+  }
+
+  if ( "BIAS" == name ) {
+    return osmosdr::gain_range_t( 0, 1, 1 );
   }
 
   return osmosdr::gain_range_t();
@@ -686,6 +692,10 @@ double hackrf_source_c::set_gain( double gain, const std::string & name, size_t 
     return set_bb_gain( gain, chan );
   }
 
+  if ( "BIAS" == name ) {
+    return hackrf_set_antenna_enable( _dev, _bias=gain);
+  }
+
   return set_gain( gain, chan );
 }
 
@@ -706,6 +716,10 @@ double hackrf_source_c::get_gain( const std::string & name, size_t chan )
 
   if ( "BB" == name ) {
     return _vga_gain;
+  }
+
+  if ( "BIAS" == name ) {
+    return _bias;
   }
 
   return get_gain( chan );
