@@ -170,8 +170,8 @@ miri_source_c::~miri_source_c ()
 {
   if (_dev) {
     _running = false;
-    mirisdr_set_bias( _dev, 0 );
     mirisdr_cancel_async( _dev );
+    mirisdr_set_bias( _dev, 0 );
     _thread.join();
     mirisdr_close( _dev );
     _dev = NULL;
