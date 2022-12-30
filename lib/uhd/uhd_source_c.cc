@@ -125,6 +125,7 @@ uhd_source_c::uhd_source_c(const std::string &args) :
 #endif
   for ( size_t i = 0; i < nchan; i++ )
     connect( _src, i, self(), i );
+  _src->set_min_output_buffer(16*1024*1024);//improve performance
 }
 
 uhd_source_c::~uhd_source_c()
