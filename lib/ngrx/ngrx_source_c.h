@@ -42,7 +42,7 @@ class ngrx_source_c;
  *
  * As a convention, the _sptr suffix indicates a boost::shared_ptr
  */
-typedef boost::shared_ptr<ngrx_source_c> ngrx_source_c_sptr;
+typedef std::shared_ptr<ngrx_source_c> ngrx_source_c_sptr;
 
 /*!
  * \brief Return a shared_ptr to a new instance of ngrx_source_c.
