@@ -270,7 +270,7 @@ endif(ENABLE_XTRX)
 ########################################################################
 GR_REGISTER_COMPONENT("NGRX support" ENABLE_NGRX LIBSDDC_FOUND)
 if(ENABLE_NGRX)
-GR_INCLUDE_SUBDIRECTORY(ngrx)
+    add_subdirectory(ngrx)
 endif(ENABLE_NGRX)
 
 ########################################################################
