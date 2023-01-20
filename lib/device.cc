@@ -194,7 +194,7 @@ devices_t device::find(const device_t &hint)
     devices.push_back( device_t(dev) );
 #endif
 #ifdef ENABLE_NGRX
-  BOOST_FOREACH( std::string dev, ngrx_source_c::get_devices() )
+  for(std::string dev: ngrx_source_c::get_devices())
     devices.push_back( device_t(dev) );
 #endif
 #ifdef ENABLE_SOAPY
