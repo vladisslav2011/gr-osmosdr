@@ -265,7 +265,7 @@ source_impl::source_impl( const std::string &args )
       dev_list.push_back( dev );
 #endif
 #ifdef ENABLE_NGRX
-    BOOST_FOREACH( std::string dev, ngrx_source_c::get_devices() )
+    for (std::string dev : ngrx_source_c::get_devices())
       dev_list.push_back( dev );
 #endif
 
@@ -516,7 +516,7 @@ double source_impl::set_sample_rate(double rate)
     int output_multiple = sample_rate / (8192 * 20);
     if (output_multiple <= 0)
       output_multiple = 1;
-    BOOST_FOREACH( source_iface *dev, _devs )
+    for( source_iface *dev: _devs )
     {
       gr::block * bdev = dynamic_cast<gr::block *>(dev);
       if(bdev)
