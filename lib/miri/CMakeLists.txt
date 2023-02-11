@@ -30,6 +30,9 @@ set(mirisdr_srcs
     ${CMAKE_CURRENT_SOURCE_DIR}/miri_source_c.cc
 )
 
+SET(MIRI_DEFAULT_FLAVOUR "0" CACHE STRING "libmirisdr default flavour")
+add_definitions(-DMIRI_DEFAULT_FLAVOUR=${MIRI_DEFAULT_FLAVOUR})
+
 ########################################################################
 # Append gnuradio-mirisdr library sources
 ########################################################################
