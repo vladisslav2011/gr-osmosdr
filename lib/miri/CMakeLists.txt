@@ -21,6 +21,9 @@
 # This file included, use CMake directory variables
 ########################################################################
 
+SET(MIRI_DEFAULT_FLAVOUR "0" CACHE STRING "libmirisdr default flavour")
+target_compile_definitions(gnuradio-osmosdr PRIVATE MIRI_DEFAULT_FLAVOUR=${MIRI_DEFAULT_FLAVOUR})
+
 target_include_directories(gnuradio-osmosdr PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${LIBMIRISDR_INCLUDE_DIRS}
@@ -34,3 +37,4 @@ list(APPEND gr_osmosdr_srcs
     ${CMAKE_CURRENT_SOURCE_DIR}/miri_source_c.cc
 )
 set(gr_osmosdr_srcs ${gr_osmosdr_srcs} PARENT_SCOPE)
+
