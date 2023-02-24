@@ -39,6 +39,7 @@
 #include <stdio.h>
 
 #include <mirisdr.h>
+#include <array>
 
 #include "arg_helpers.h"
 
@@ -51,6 +52,20 @@ using namespace boost::assign;
 #define BYTES_PER_SAMPLE  4 // mirisdr device delivers 16 bit signed IQ data
                             // containing 12 bits of information
 #define DC_LOOPS 5
+
+struct fmt_map
+{
+    unsigned int bits;
+    std::string fmt;
+};
+
+static const std::array<fmt_map,4> formats=
+{
+    (fmt_map){8,"504_S16"},
+    (fmt_map){10,"384_S16"},
+    (fmt_map){12,"336_S16"},
+    (fmt_map){14,"252_S16"}
+};
 
 /*
  * Create a new instance of miri_source_c and return
@@ -94,7 +109,8 @@ miri_source_c::miri_source_c (const std::string &args)
     _dc_count(0),
     _dc_size(0),
     _gain_mode(0),
-    _bias(0)
+    _bias(0),
+    _no_q(false)
 {
   int ret;
   unsigned int dev_index = 0;
@@ -107,6 +123,8 @@ miri_source_c::miri_source_c (const std::string &args)
   _buf_num = _buf_head = _buf_used = _buf_offset = 0;
   _samp_avail = BUF_SIZE / BYTES_PER_SAMPLE;
 
+  if (dict.count("noq"))
+    _no_q = boost::lexical_cast< unsigned int >( dict["noq"] );
   if (dict.count("bias"))
     _bias = boost::lexical_cast< unsigned int >( dict["bias"] );
   if (dict.count("gain_mode"))
@@ -139,6 +157,17 @@ miri_source_c::miri_source_c (const std::string &args)
     flavour = boost::lexical_cast< unsigned int >( dict["flavour"] );
   mirisdr_set_hw_flavour( _dev, mirisdr_hw_flavour_t(flavour));
 #endif
+  if(dict.count("bits"))
+  {
+    unsigned int bits = boost::lexical_cast< unsigned int >( dict["bits"] );
+    unsigned int k;
+    for( k = 0; k < formats.size(); k++ )
+        if( formats[k].bits == bits )
+            break;
+    if( k == formats.size() )
+        k=0;
+    mirisdr_set_sample_format( _dev, (char *)formats[k].fmt.c_str());
+  }
 #if 0
   ret = mirisdr_set_sample_rate( _dev, 500000 );
   if (ret < 0)
@@ -270,7 +299,7 @@ int miri_source_c::work( int noutput_items,
   if (noutput_items <= _samp_avail) {
     for (int i = 0; i < noutput_items; i++)
       *out++ = gr_complex( float(*(buf + i * 2 + 0)) * (1.0f/32768.0f),
-                           float(*(buf + i * 2 + 1)) * (1.0f/32768.0f) ) -
+                           _no_q ? 0.0 : float(*(buf + i * 2 + 1)) * (1.0f/32768.0f)) -
                            _dc_offset;
 
     _buf_offset += noutput_items * 2;
@@ -279,7 +308,7 @@ int miri_source_c::work( int noutput_items,
   } else {
     for (int i = 0; i < _samp_avail; i++)
       *out++ = gr_complex( float(*(buf + i * 2 + 0)) * (1.0f/32768.0f),
-                           float(*(buf + i * 2 + 1)) * (1.0f/32768.0f) ) -
+                           _no_q ? 0.0 : float(*(buf + i * 2 + 1)) * (1.0f/32768.0f)) -
                            _dc_offset;
 
     {
@@ -299,7 +328,7 @@ int miri_source_c::work( int noutput_items,
 
     for (int i = 0; i < remaining; i++)
       *out++ = gr_complex( float(*(buf + i * 2 + 0)) * (1.0f/32768.0f),
-                           float(*(buf + i * 2 + 1)) * (1.0f/32768.0f) ) -
+                           _no_q ? 0.0 : float(*(buf + i * 2 + 1)) * (1.0f/32768.0f)) -
                            _dc_offset;
 
     _buf_offset = remaining * 2;

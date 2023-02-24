@@ -141,6 +141,7 @@ private:
   int _dc_size;
   bool _gain_mode;
   int _bias;
+  bool _no_q;
 
 };
 
