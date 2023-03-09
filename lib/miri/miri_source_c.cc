@@ -157,6 +157,7 @@ miri_source_c::miri_source_c (const std::string &args)
     flavour = boost::lexical_cast< unsigned int >( dict["flavour"] );
   mirisdr_set_hw_flavour( _dev, mirisdr_hw_flavour_t(flavour));
 #endif
+  mirisdr_read_cal(_dev,&_t0,&_t1,&_t2,&_t3,&_t4,&_t5);
   if(dict.count("bits"))
   {
     unsigned int bits = boost::lexical_cast< unsigned int >( dict["bits"] );
@@ -457,9 +458,9 @@ double miri_source_c::get_freq_corr( size_t chan )
 std::vector<std::string> miri_source_c::get_gain_names( size_t chan )
 {
   if(_gain_mode)
-    return std::vector< std::string > ({"LNA","MIXBUFFER","MIXER","BASEBAND","BIAS"});
+    return std::vector< std::string > ({"LNA","MIXBUFFER","MIXER","BASEBAND","BIAS","T0","T0s","T1","T1s","T2","T2s","T3","T3s","T4","T4s","T5"});
   else
-    return std::vector< std::string > ({"LNA","BIAS"});
+    return std::vector< std::string > ({"LNA","BIAS","T0","T0s","T1","T1s","T2","T2s","T3","T3s","T4","T4s","T5"});
 }
 
 osmosdr::gain_range_t miri_source_c::get_gain_range( size_t chan )
@@ -505,7 +506,28 @@ osmosdr::gain_range_t miri_source_c::get_gain_range( const std::string & name, s
   {
      return osmosdr::gain_range_t( 0, 1, 1 );
   }
-
+  if ("T0" == name )
+     return osmosdr::gain_range_t( 0, 31, 1 );
+  if ("T0s" == name )
+     return osmosdr::gain_range_t( 0, 1, 1 );
+  if ("T1" == name )
+     return osmosdr::gain_range_t( 0, 15, 1 );
+  if ("T1s" == name )
+     return osmosdr::gain_range_t( 0, 1, 1 );
+  if ("T2" == name )
+     return osmosdr::gain_range_t( 0, 31, 1 );
+  if ("T2s" == name )
+     return osmosdr::gain_range_t( 0, 1, 1 );
+  if ("T3" == name )
+     return osmosdr::gain_range_t( 0, 15, 1 );
+  if ("T3s" == name )
+     return osmosdr::gain_range_t( 0, 1, 1 );
+  if ("T4" == name )
+     return osmosdr::gain_range_t( 0, 31, 1 );
+  if ("T4s" == name )
+     return osmosdr::gain_range_t( 0, 1, 1 );
+  if ("T5" == name )
+     return osmosdr::gain_range_t( 0, 7, 1 );
 
   return get_gain_range( chan );
 }
@@ -566,6 +588,78 @@ double miri_source_c::set_gain( double gain, const std::string & name, size_t ch
     return gain;
   }
 
+  if ("T0" == name )
+  {
+    _t0=gain;
+    mirisdr_write_cal(_dev,_t0,_t0f,_t1,_t1f,_t2,_t2f,_t3,_t3f,_t4,_t4f,_t5);
+    return gain;
+  }
+  if ("T0s" == name )
+  {
+    _t0f=gain;
+    mirisdr_write_cal(_dev,_t0,_t0f,_t1,_t1f,_t2,_t2f,_t3,_t3f,_t4,_t4f,_t5);
+    return gain;
+  }
+
+  if ("T1" == name )
+  {
+    _t1=gain;
+    mirisdr_write_cal(_dev,_t0,_t0f,_t1,_t1f,_t2,_t2f,_t3,_t3f,_t4,_t4f,_t5);
+    return gain;
+  }
+  if ("T1s" == name )
+  {
+    _t1f=gain;
+    mirisdr_write_cal(_dev,_t0,_t0f,_t1,_t1f,_t2,_t2f,_t3,_t3f,_t4,_t4f,_t5);
+    return gain;
+  }
+
+  if ("T2" == name )
+  {
+    _t2=gain;
+    mirisdr_write_cal(_dev,_t0,_t0f,_t1,_t1f,_t2,_t2f,_t3,_t3f,_t4,_t4f,_t5);
+    return gain;
+  }
+  if ("T2s" == name )
+  {
+    _t2f=gain;
+    mirisdr_write_cal(_dev,_t0,_t0f,_t1,_t1f,_t2,_t2f,_t3,_t3f,_t4,_t4f,_t5);
+    return gain;
+  }
+
+  if ("T3" == name )
+  {
+    _t3=gain;
+    mirisdr_write_cal(_dev,_t0,_t0f,_t1,_t1f,_t2,_t2f,_t3,_t3f,_t4,_t4f,_t5);
+    return gain;
+  }
+  if ("T3s" == name )
+  {
+    _t3f=gain;
+    mirisdr_write_cal(_dev,_t0,_t0f,_t1,_t1f,_t2,_t2f,_t3,_t3f,_t4,_t4f,_t5);
+    return gain;
+  }
+
+  if ("T4" == name )
+  {
+    _t4=gain;
+    mirisdr_write_cal(_dev,_t0,_t0f,_t1,_t1f,_t2,_t2f,_t3,_t3f,_t4,_t4f,_t5);
+    return gain;
+  }
+  if ("T4s" == name )
+  {
+    _t4f=gain;
+    mirisdr_write_cal(_dev,_t0,_t0f,_t1,_t1f,_t2,_t2f,_t3,_t3f,_t4,_t4f,_t5);
+    return gain;
+  }
+  if ("T5" == name )
+  {
+    _t5=gain;
+    mirisdr_write_cal(_dev,_t0,_t0f,_t1,_t1f,_t2,_t2f,_t3,_t3f,_t4,_t4f,_t5);
+    return gain;
+  }
+
+
   return set_gain( gain, chan );
 }
 
@@ -602,6 +696,28 @@ double miri_source_c::get_gain( const std::string & name, size_t chan )
   {
     return _bias;
   }
+  if ("T0" == name )
+    return _t0;
+  if ("T0s" == name )
+    return _t0f;
+  if ("T1" == name )
+    return _t1;
+  if ("T1s" == name )
+    return _t1f;
+  if ("T2" == name )
+    return _t2;
+  if ("T2s" == name )
+    return _t2f;
+  if ("T3" == name )
+    return _t3;
+  if ("T3s" == name )
+    return _t3f;
+  if ("T4" == name )
+    return _t4;
+  if ("T4s" == name )
+    return _t4f;
+  if ("T5" == name )
+    return _t5;
 
   return get_gain( chan );
 }
@@ -628,7 +744,7 @@ std::string miri_source_c::get_antenna( size_t chan )
 double miri_source_c::set_bandwidth( double bandwidth, size_t chan )
 {
   if ( bandwidth == 0.0 ) /* bandwidth of 0 means automatic filter selection */
-    bandwidth = mirisdr_get_sample_rate( _dev ) * 0.75; /* select narrower filters to prevent aliasing */
+    bandwidth = mirisdr_get_sample_rate( _dev ) * 0.95; /* select narrower filters to prevent aliasing */
 
   if ( _dev ) {
     mirisdr_set_bandwidth( _dev, uint32_t(bandwidth) );

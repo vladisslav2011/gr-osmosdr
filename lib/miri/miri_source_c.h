@@ -142,6 +142,17 @@ private:
   bool _gain_mode;
   int _bias;
   bool _no_q;
+  unsigned _t0{0};
+  unsigned _t0f{0};
+  unsigned _t1{0};
+  unsigned _t1f{0};
+  unsigned _t2{0};
+  unsigned _t2f{0};
+  unsigned _t3{0};
+  unsigned _t3f{0};
+  unsigned _t4{0};
+  unsigned _t4f{0};
+  unsigned _t5{0};
 
 };
 
