@@ -45,7 +45,7 @@
 using namespace boost::assign;
 
 #define BUF_SIZE  (1024 * 1024)
-#define BUF_NUM   15
+#define BUF_NUM   64
 #define BUF_SKIP  1 // buffers to skip due to garbage
 
 #define BYTES_PER_SAMPLE  8
@@ -225,7 +225,7 @@ void ngrx_source_c::sddc_callback(unsigned char *buf, uint32_t len)
     _buf_lens[buf_tail] = len;
 
     if (_buf_used == _buf_num) {
-//      std::cerr << "O" << std::flush;
+      std::cout << "O" << std::flush;
       _buf_head = (_buf_head + 1) % _buf_num;
     } else {
       _buf_used++;
