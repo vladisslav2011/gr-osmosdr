@@ -35,3 +35,10 @@ set(ngrx_srcs
 ########################################################################
 list(APPEND gr_osmosdr_srcs ${ngrx_srcs})
 list(APPEND gr_osmosdr_libs ${LIBSDDC_LIBRARIES})
+
+if(LIBSDDC_LIBRARIES MATCHES "\\.a$")
+  pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
+  pkg_check_modules(LIBFFTW REQUIRED fftw3f)
+  list(APPEND gr_osmosdr_libs ${LIBUSB_LIBRARIES})
+  list(APPEND gr_osmosdr_libs ${LIBFFTW_LIBRARIES})
+endif()
