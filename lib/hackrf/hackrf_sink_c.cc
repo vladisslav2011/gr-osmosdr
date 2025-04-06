@@ -222,12 +222,22 @@ bool hackrf_sink_c::start()
 
   _stopping = false;
   _buf_used = 0;
+  if(_dev->receiving)
+  {
+      int ret = hackrf_stop_rx(_dev->raw_dev);
+      if ( ret != HACKRF_SUCCESS ) {
+          std::cerr << "Failed to start TX streaming: failed to stop rx streaming (" << ret << ")" << std::endl;
+          return false;
+      }
+      _dev->receiving = false;
+  }
   hackrf_common::start();
-  int ret = hackrf_start_tx( _dev.get(), _hackrf_tx_callback, (void *)this );
+  int ret = hackrf_start_tx( _dev->raw_dev, _hackrf_tx_callback, (void *)this );
   if ( ret != HACKRF_SUCCESS ) {
     std::cerr << "Failed to start TX streaming (" << ret << ")" << std::endl;
     return false;
   }
+  _dev->transmitting = true;
   return true;
 }
 
@@ -260,16 +270,17 @@ bool hackrf_sink_c::stop()
 
     _stopping = true;
 
-    while (hackrf_is_streaming(_dev.get()) == HACKRF_TRUE)
+    while (hackrf_is_streaming(_dev->raw_dev) == HACKRF_TRUE)
       _buf_cond.wait( lock );
   }
 
   hackrf_common::stop();
-  int ret = hackrf_stop_tx( _dev.get() );
+  int ret = hackrf_stop_tx(_dev->raw_dev);
   if ( ret != HACKRF_SUCCESS ) {
     std::cerr << "Failed to stop TX streaming (" << ret << ")" << std::endl;
     return false;
   }
+  _dev->transmitting = false;
   return true;
 }
 
@@ -520,7 +531,7 @@ double hackrf_sink_c::set_if_gain( double gain, size_t chan )
   if (_dev.get()) {
     double clip_gain = if_gains.clip( gain, true );
 
-    ret = hackrf_set_txvga_gain( _dev.get(), uint32_t(clip_gain) );
+    ret = hackrf_set_txvga_gain(_dev->raw_dev, uint32_t(clip_gain) );
     if ( HACKRF_SUCCESS == ret ) {
       _vga_gain = clip_gain;
     } else {

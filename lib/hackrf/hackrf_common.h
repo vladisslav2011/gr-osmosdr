@@ -49,7 +49,20 @@
 #define HACKRF_FUNC_STR(func, arg) \
   boost::str(boost::format(func "(%1%)") % arg) + " has failed"
 
-typedef std::shared_ptr<hackrf_device> hackrf_sptr;
+struct hackrf_device_ctx
+{
+    hackrf_device *raw_dev{nullptr};
+    bool transmitting{0};
+    bool receiving{0};
+    hackrf_device_ctx(hackrf_device * raw, bool tx, bool rx):
+        raw_dev(raw),
+        transmitting(tx),
+        receiving(rx)
+    {
+    }
+};
+
+typedef std::shared_ptr<hackrf_device_ctx> hackrf_sptr;
 
 class hackrf_common
 {
@@ -97,7 +110,7 @@ private:
   static int _usage;
   static std::mutex _usage_mutex;
 
-  static std::map<std::string, std::weak_ptr<hackrf_device>> _devs;
+  static std::map<std::string, std::weak_ptr<hackrf_device_ctx>> _devs;
   static std::mutex _devs_mutex;
 
   double _center_freq;

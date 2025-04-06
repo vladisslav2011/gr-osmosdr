@@ -28,7 +28,7 @@
 int hackrf_common::_usage = 0;
 std::mutex hackrf_common::_usage_mutex;
 
-std::map<std::string, std::weak_ptr<hackrf_device>> hackrf_common::_devs;
+std::map<std::string, std::weak_ptr<hackrf_device_ctx>> hackrf_common::_devs;
 std::mutex hackrf_common::_devs_mutex;
 
 hackrf_common::hackrf_common(const std::string &args) :
@@ -110,20 +110,20 @@ hackrf_common::hackrf_common(const std::string &args) :
     } else {
       ret = hackrf_device_list_open(list, dev_index, &raw_dev);
       HACKRF_THROW_ON_ERROR(ret, "Failed to open HackRF device")
-      _dev = hackrf_sptr(raw_dev, hackrf_common::close);
-      _devs[final_serial] = static_cast<std::weak_ptr<struct hackrf_device>>(_dev);
+      _dev = hackrf_sptr(new hackrf_device_ctx(raw_dev, false, false), hackrf_common::close);
+      _devs[final_serial] = static_cast<std::weak_ptr<struct hackrf_device_ctx>>(_dev);
     }
   }
 
   hackrf_device_list_free(list);
 
   uint8_t board_id;
-  ret = hackrf_board_id_read(_dev.get(), &board_id);
+  ret = hackrf_board_id_read(_dev->raw_dev, &board_id);
   HACKRF_THROW_ON_ERROR(ret, "Failed to get HackRF board id")
 
   char version[40];
   memset(version, 0, sizeof(version));
-  ret = hackrf_version_string_read(_dev.get(), version, sizeof(version));
+  ret = hackrf_version_string_read(_dev->raw_dev, version, sizeof(version));
   HACKRF_THROW_ON_ERROR(ret, "Failed to read version string")
 
   std::cerr << "Using " << hackrf_board_id_name(hackrf_board_id(board_id)) << " "
@@ -133,7 +133,7 @@ hackrf_common::hackrf_common(const std::string &args) :
 
 void hackrf_common::close(void *dev)
 {
-  int ret = hackrf_close(static_cast<hackrf_device *>(dev));
+  int ret = hackrf_close(static_cast<hackrf_device_ctx *>(dev)->raw_dev);
   if (ret != HACKRF_SUCCESS)
   {
     std::cerr << HACKRF_FORMAT_ERROR(ret, "Failed to close HackRF") << std::endl;
@@ -224,7 +224,7 @@ double hackrf_common::set_sample_rate( double rate )
   int ret;
 
   if (_dev.get() && _started) {
-    ret = hackrf_set_sample_rate( _dev.get(), rate );
+    ret = hackrf_set_sample_rate( _dev->raw_dev, rate );
     if ( HACKRF_SUCCESS != ret ) {
       HACKRF_THROW_ON_ERROR( ret, HACKRF_FUNC_STR( "hackrf_set_sample_rate", rate ) )
     }
@@ -256,7 +256,7 @@ double hackrf_common::set_center_freq( double freq, size_t chan )
 
   if (_dev.get() && _started) {
     double corr_freq = APPLY_PPM_CORR( freq, _freq_corr );
-    ret = hackrf_set_freq( _dev.get(), uint64_t(corr_freq) );
+    ret = hackrf_set_freq( _dev->raw_dev, uint64_t(corr_freq) );
     if ( HACKRF_SUCCESS != ret ) {
       HACKRF_THROW_ON_ERROR( ret, HACKRF_FUNC_STR( "hackrf_set_freq", corr_freq ) )
     }
@@ -305,7 +305,7 @@ double hackrf_common::set_gain( double gain, size_t chan )
   if (_dev.get() && _started) {
     uint8_t value = (clip_gain == 14.0) ? 1 : 0;
 
-    ret = hackrf_set_amp_enable( _dev.get(), value );
+    ret = hackrf_set_amp_enable( _dev->raw_dev, value );
     if ( HACKRF_SUCCESS != ret ) {
       HACKRF_THROW_ON_ERROR( ret, HACKRF_FUNC_STR( "hackrf_set_amp_enable", value ) )
     }
@@ -348,7 +348,7 @@ double hackrf_common::set_bandwidth( double bandwidth, size_t chan )
   uint32_t bw = hackrf_compute_baseband_filter_bw( uint32_t(bandwidth) );
 
   if (_dev.get() && _started) {
-    ret = hackrf_set_baseband_filter_bandwidth( _dev.get(), bw );
+    ret = hackrf_set_baseband_filter_bandwidth( _dev->raw_dev, bw );
     if (HACKRF_SUCCESS != ret) {
       HACKRF_THROW_ON_ERROR( ret, HACKRF_FUNC_STR( "hackrf_set_baseband_filter_bandwidth", bw ) )
     }
@@ -394,7 +394,7 @@ bool hackrf_common::set_bias( bool bias )
   int ret;
 
   if (_dev.get() && _started) {
-    ret = hackrf_set_antenna_enable(_dev.get(), static_cast<uint8_t>(bias));
+    ret = hackrf_set_antenna_enable(_dev->raw_dev, static_cast<uint8_t>(bias));
     if (ret != HACKRF_SUCCESS)
     {
       std::cerr << "Failed to apply antenna bias voltage state: " << bias << HACKRF_FORMAT_ERROR(ret, "") << std::endl;

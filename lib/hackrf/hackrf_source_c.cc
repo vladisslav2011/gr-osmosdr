@@ -121,6 +121,7 @@ hackrf_source_c::hackrf_source_c (const std::string &args)
     for(unsigned int i = 0; i < _buf_num; ++i)
       _buf[i] = (unsigned char *) malloc(_buf_len);
   }
+  start();
 }
 
 /*
@@ -128,6 +129,15 @@ hackrf_source_c::hackrf_source_c (const std::string &args)
  */
 hackrf_source_c::~hackrf_source_c ()
 {
+  if(_dev.get())
+  {
+    if(_dev->receiving)
+    {
+      hackrf_common::stop();
+      hackrf_stop_rx(_dev->raw_dev);
+      _dev->receiving = false;
+    }
+  }
   if (_buf) {
     for(unsigned int i = 0; i < _buf_num; ++i) {
       free(_buf[i]);
@@ -189,12 +199,22 @@ bool hackrf_source_c::start()
   if ( ! _dev.get() )
     return false;
 
+  if( _dev->transmitting)
+  {
+    std::cerr << "Failed to start RX streaming: transmitting in progress" << std::endl;
+    return false;
+  }
+
+  if( _dev->receiving)
+    return true;
+
   hackrf_common::start();
-  int ret = hackrf_start_rx( _dev.get(), _hackrf_rx_callback, (void *)this );
+  int ret = hackrf_start_rx(_dev->raw_dev, _hackrf_rx_callback, (void *)this );
   if ( ret != HACKRF_SUCCESS ) {
     std::cerr << "Failed to start RX streaming (" << ret << ")" << std::endl;
     return false;
   }
+  _dev->receiving = true;
   return true;
 }
 
@@ -203,11 +223,14 @@ bool hackrf_source_c::stop()
   if ( ! _dev.get() )
     return false;
 
+  if(0)
+  {
   hackrf_common::stop();
-  int ret = hackrf_stop_rx( _dev.get() );
+  int ret = hackrf_stop_rx(_dev->raw_dev);
   if ( ret != HACKRF_SUCCESS ) {
     std::cerr << "Failed to stop RX streaming (" << ret << ")" << std::endl;
     return false;
+  }
   }
   return true;
 }
@@ -223,7 +246,7 @@ int hackrf_source_c::work( int noutput_items,
   int written = 0;
 
   if ( _dev.get() )
-    running = (hackrf_is_streaming( _dev.get() ) == HACKRF_TRUE);
+    running = (hackrf_is_streaming(_dev->raw_dev) == HACKRF_TRUE);
 
   {
     std::unique_lock<std::mutex> lock(_buf_mutex);
@@ -233,7 +256,7 @@ int hackrf_source_c::work( int noutput_items,
 
       // Re-check whether the device has closed or stopped streaming
       if ( _dev.get() )
-        running = (hackrf_is_streaming( _dev.get() ) == HACKRF_TRUE);
+        running = (hackrf_is_streaming(_dev->raw_dev) == HACKRF_TRUE);
       else
         running = false;
     }
@@ -437,7 +460,7 @@ double hackrf_source_c::set_if_gain(double gain, size_t chan)
   if (_dev.get()) {
     double clip_gain = rf_gains.clip( gain, true );
 
-    ret = hackrf_set_lna_gain( _dev.get(), uint32_t(clip_gain) );
+    ret = hackrf_set_lna_gain(_dev->raw_dev, uint32_t(clip_gain) );
     if ( HACKRF_SUCCESS == ret ) {
       _lna_gain = clip_gain;
       _avg_loops = 0;
@@ -457,7 +480,7 @@ double hackrf_source_c::set_bb_gain( double gain, size_t chan )
   if (_dev.get()) {
     double clip_gain = if_gains.clip( gain, true );
 
-    ret = hackrf_set_vga_gain( _dev.get(), uint32_t(clip_gain) );
+    ret = hackrf_set_vga_gain(_dev->raw_dev, uint32_t(clip_gain) );
     if ( HACKRF_SUCCESS == ret ) {
       _vga_gain = clip_gain;
       _avg_loops = 0;
