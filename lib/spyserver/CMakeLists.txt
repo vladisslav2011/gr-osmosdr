@@ -23,7 +23,6 @@
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${LIBSDDC_INCLUDE_DIRS}
 )
 
 set(spyserver_srcs
@@ -35,4 +34,3 @@ set(spyserver_srcs
 # Append gnuradio-mirisdr library sources
 ########################################################################
 list(APPEND gr_osmosdr_srcs ${spyserver_srcs})
-list(APPEND gr_osmosdr_libs ${LIBSDDC_LIBRARIES})
