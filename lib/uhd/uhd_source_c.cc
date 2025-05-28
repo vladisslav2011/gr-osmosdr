@@ -81,6 +81,7 @@ uhd_source_c::uhd_source_c(const std::string &args) :
          "nchan" == entry.first ||
          "subdev" == entry.first ||
          "lo_offset" == entry.first ||
+         "clksrc" == entry.first ||
          "uhd" == entry.first )
       continue;
 
