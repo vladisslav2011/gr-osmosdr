@@ -110,6 +110,9 @@ uhd_source_c::uhd_source_c(const std::string &args) :
   if (dict.count("subdev"))
     _src->set_subdev_spec( dict["subdev"] );
 
+  if (dict.count("clksrc"))
+    _src->set_clock_source( dict["clksrc"], 0 );
+
   std::cerr << "-- Using subdev spec '" << _src->get_subdev_spec() << "'."
             << std::endl;
 

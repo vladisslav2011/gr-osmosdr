@@ -109,6 +109,9 @@ uhd_sink_c::uhd_sink_c(const std::string &args) :
   if (dict.count("subdev"))
     _snk->set_subdev_spec( dict["subdev"] );
 
+  if (dict.count("clksrc"))
+    _snk->set_clock_source( dict["clksrc"], 0 );
+
   std::cerr << "-- Using subdev spec '" << _snk->get_subdev_spec() << "'."
             << std::endl;
 
