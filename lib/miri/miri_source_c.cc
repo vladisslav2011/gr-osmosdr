@@ -168,6 +168,10 @@ miri_source_c::miri_source_c (const std::string &args)
         k=0;
     mirisdr_set_sample_format( _dev, (char *)formats[k].fmt.c_str());
   }
+  #ifdef HAVE_SET_TRANSFER_MOODE
+  if (dict.count("iso"))
+    mirisdr_set_transfer_mode(_dev, 1);
+  #endif
 #if 0
   ret = mirisdr_set_sample_rate( _dev, 500000 );
   if (ret < 0)
