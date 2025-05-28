@@ -235,11 +235,14 @@ double uhd_source_c::set_center_freq( double freq, size_t chan )
   _center_freq = freq;
 
   return get_center_freq(chan);
+  #undef APPLY_PPM_CORR
 }
 
 double uhd_source_c::get_center_freq( size_t chan )
 {
-  return _src->get_center_freq(chan);
+  #define APPLY_PPM_CORR(val, ppm) ((val) / (1.0 + (ppm) * 0.000001))
+  return APPLY_PPM_CORR(_src->get_center_freq(chan), _freq_corr);
+  #undef APPLY_PPM_CORR
 }
 
 double uhd_source_c::set_freq_corr( double ppm, size_t chan )
