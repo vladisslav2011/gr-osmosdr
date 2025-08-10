@@ -20,6 +20,7 @@
 #ifndef UHD_SOURCE_C_H
 #define UHD_SOURCE_C_H
 
+#include <vector>
 #include <gnuradio/hier_block2.h>
 #include <gnuradio/uhd/usrp_source.h>
 
@@ -99,6 +100,8 @@ private:
   double _center_freq;
   double _freq_corr;
   double _lo_offset;
+  std::vector<double> _bandwidth;
+  double _sample_rate;
   gr::uhd::usrp_source::sptr _src;
 };
 

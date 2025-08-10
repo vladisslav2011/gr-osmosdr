@@ -56,7 +56,9 @@ uhd_source_c::uhd_source_c(const std::string &args) :
                                           sizeof(gr_complex))),
     _center_freq(0.0f),
     _freq_corr(0.0f),
-    _lo_offset(0.0f)
+    _lo_offset(0.0f),
+    _bandwidth(parse_nchan(args)),
+    _sample_rate(0.)
 {
   size_t nchan = 1;
   dict_t dict = params_to_dict(args);
@@ -204,7 +206,11 @@ osmosdr::meta_range_t uhd_source_c::get_sample_rates( void )
 
 double uhd_source_c::set_sample_rate( double rate )
 {
+  _sample_rate = rate;
   _src->set_samp_rate( rate );
+  for( unsigned k = 0; k < _bandwidth.size(); k ++ )
+    if( _bandwidth[k] == 0. )
+      _src->set_bandwidth(rate, k);
   return get_sample_rate();
 }
 
@@ -377,7 +383,13 @@ void uhd_source_c::set_iq_balance( const std::complex<double> &balance, size_t c
 
 double uhd_source_c::set_bandwidth( double bandwidth, size_t chan )
 {
-  _src->set_bandwidth(bandwidth, chan);
+  if ( _bandwidth[chan] == bandwidth)
+    return _src->get_bandwidth(chan);
+  _bandwidth[chan] = bandwidth;
+  if ( bandwidth == 0.)
+    _src->set_bandwidth(_sample_rate, chan);
+  else
+    _src->set_bandwidth(bandwidth, chan);
 
   return _src->get_bandwidth(chan);
 }
