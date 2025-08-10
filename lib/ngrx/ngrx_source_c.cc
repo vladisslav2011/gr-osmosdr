@@ -127,7 +127,7 @@ ngrx_source_c::ngrx_source_c (const std::string &args)
   if (dict.count("buffers"))
     _buf_num = boost::lexical_cast< unsigned int >( dict["buffers"] );
 
-  if (0 == _buf_num)
+  if (6 > _buf_num)
     _buf_num = BUF_NUM;
 
   if ( BUF_NUM != _buf_num ) {
@@ -221,7 +221,9 @@ void ngrx_source_c::sddc_callback(unsigned char *buf, uint32_t len)
     }
 
     int buf_tail = (_buf_head + _buf_used) % _buf_num;
+    lock.unlock();
     memcpy(_buf[buf_tail], buf, len);
+    lock.lock();
     _buf_lens[buf_tail] = len;
 
     if (_buf_used == _buf_num) {
@@ -254,7 +256,7 @@ int ngrx_source_c::work( int noutput_items,
   {
     boost::mutex::scoped_lock lock( _buf_mutex );
 
-    while (_buf_used < 3 && _running) // collect at least 3 buffers
+    while (_buf_used < 6 && _running) // collect at least 6 buffers
       _buf_cond.wait( lock );
   }
 
