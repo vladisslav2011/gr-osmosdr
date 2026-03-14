@@ -37,4 +37,4 @@ add_definitions(-DMIRI_DEFAULT_FLAVOUR=${MIRI_DEFAULT_FLAVOUR})
 # Append gnuradio-mirisdr library sources
 ########################################################################
 list(APPEND gr_osmosdr_srcs ${mirisdr_srcs})
-list(APPEND gr_osmosdr_libs ${LIBMIRISDR_LIBRARIES})
+list(APPEND gr_osmosdr_libs ${LIBMIRISDR_LIBRARIES} usb-1.0)
