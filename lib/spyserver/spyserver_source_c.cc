@@ -104,7 +104,9 @@ spyserver_source_c::spyserver_source_c (const std::string &args)
   else if (dict.count("spyserver"))
   {
     std::vector<std::string> spyserver;
-    boost::split(spyserver,dict["spyserver"],boost::is_any_of(":"));
+    std::string param = dict["spyserver"];
+    boost::erase_all(param, "sdr://");
+    boost::split(spyserver,param,boost::is_any_of(":"));
     ip=spyserver[0];
     if(spyserver.size()==2)
       port=boost::lexical_cast<int>( spyserver[1] );
