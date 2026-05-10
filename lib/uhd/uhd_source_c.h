@@ -102,7 +102,12 @@ private:
   double _lo_offset;
   std::vector<double> _bandwidth;
   double _sample_rate;
+  bool   _enable_user_regs{false};
+  double _coarse{127.};
+  double _fine{255.};
+  double _use_fine{0.};
   gr::uhd::usrp_source::sptr _src;
+
 };
 
 #endif // UHD_SOURCE_C_H

@@ -66,6 +66,8 @@ uhd_source_c::uhd_source_c(const std::string &args) :
 
   if (dict.count("nchan"))
     nchan = boost::lexical_cast< size_t >( dict["nchan"] );
+  if (dict.count("enable_user_regs"))
+    _enable_user_regs = true;
 
   if (0 == nchan)
     nchan = 1;
@@ -268,7 +270,14 @@ double uhd_source_c::get_freq_corr( size_t chan )
 
 std::vector<std::string> uhd_source_c::get_gain_names( size_t chan )
 {
-  return _src->get_gain_names( chan );
+  std::vector<std::string> ret = _src->get_gain_names( chan );
+  if(_enable_user_regs)
+  {
+    ret.push_back("coarse");
+    ret.push_back("fine");
+    ret.push_back("use_fine");
+  }
+  return ret;
 }
 
 osmosdr::gain_range_t uhd_source_c::get_gain_range( size_t chan )
@@ -285,8 +294,19 @@ osmosdr::gain_range_t uhd_source_c::get_gain_range( const std::string & name, si
 {
   osmosdr::gain_range_t range;
 
-  BOOST_FOREACH( uhd::range_t gain, _src->get_gain_range(name, chan) )
-      range += osmosdr::range_t( gain.start(), gain.stop(), gain.step() );
+  if(name == "coarse")
+  {
+    range += osmosdr::range_t( 0, 255, 1 );
+  }else if(name == "fine")
+  {
+    range += osmosdr::range_t( 0, 255, 1 );
+  }else if(name == "use_fine")
+  {
+    range += osmosdr::range_t( 0, 1, 1 );
+  }else{
+    BOOST_FOREACH( uhd::range_t gain, _src->get_gain_range(name, chan) )
+        range += osmosdr::range_t( gain.start(), gain.stop(), gain.step() );
+  }
 
   return range;
 }
@@ -300,6 +320,42 @@ double uhd_source_c::set_gain( double gain, size_t chan )
 
 double uhd_source_c::set_gain( double gain, const std::string & name, size_t chan )
 {
+  if(name == "coarse")
+  {
+    _coarse=gain;
+    auto dev = _src->get_device();
+    auto regs = dev->get_user_settings_iface(0);
+    uint32_t val = uint32_t(_coarse)<<8;
+    val |= uint32_t(_fine);
+    regs->poke32(8,val);
+    if(_use_fine > 0.5)
+        val |= 0x80000000;
+    return gain;
+  }
+  if(name == "fine")
+  {
+    _fine=gain;
+    auto dev = _src->get_device();
+    auto regs = dev->get_user_settings_iface(0);
+    uint32_t val = uint32_t(_coarse)<<8;
+    val |= uint32_t(_fine);
+    if(_use_fine > 0.5)
+        val |= 0x80000000;
+    regs->poke32(8,val);
+    return gain;
+  }
+  if(name == "use_fine")
+  {
+    _use_fine=gain;
+    auto dev = _src->get_device();
+    auto regs = dev->get_user_settings_iface(0);
+    uint32_t val = uint32_t(_coarse)<<8;
+    val |= uint32_t(_fine);
+    if(_use_fine > 0.5)
+        val |= 0x80000000;
+    regs->poke32(8,val);
+    return gain;
+  }
   _src->set_gain(gain, name, chan);
 
   return get_gain(name, chan);
@@ -312,6 +368,12 @@ double uhd_source_c::get_gain( size_t chan )
 
 double uhd_source_c::get_gain( const std::string & name, size_t chan )
 {
+  if(name == "coarse")
+    return _coarse;
+  if(name == "fine")
+    return _fine;
+  if(name == "use_fine")
+    return _use_fine;
   return _src->get_gain(name, chan);
 }
 
